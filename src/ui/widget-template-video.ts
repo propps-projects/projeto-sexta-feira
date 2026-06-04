@@ -136,6 +136,36 @@ export function buildPlayerWidgetHtmlVideo(): string {
                 || tool;
         if (data && data.hlsUrl) render(data);
       }, false);
+
+      // Ask the host to resize the wrapper iframe to fit the widget. Claude's
+      // host iframe defaults to a short height that crops the <video>, and
+      // the resource _meta preferred-frame-size hint is not honored. Sending
+      // ui-size-change here makes the mcp-ui adapter translate it to a
+      // ui/notifications/size-changed JSON-RPC notification, which Claude
+      // does respect on the iframe wrapper.
+      function notifySize() {
+        try {
+          // measure full content height; falls back to a sane minimum.
+          var h = Math.max(document.body.scrollHeight || 0, document.documentElement.scrollHeight || 0, 460);
+          window.parent.postMessage({
+            type: 'ui-size-change',
+            payload: { height: h, width: window.innerWidth || 600 }
+          }, '*');
+        } catch (e) {}
+      }
+      // Notify after initial paint, after render data lands, and on resize.
+      if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        setTimeout(notifySize, 50);
+      } else {
+        document.addEventListener('DOMContentLoaded', function() { setTimeout(notifySize, 50); });
+      }
+      window.addEventListener('resize', notifySize);
+      // Re-measure each time the player layout could change.
+      var sizeTries = 0;
+      var sizeInterval = setInterval(function() {
+        notifySize();
+        if (++sizeTries > 10) clearInterval(sizeInterval);
+      }, 250);
     })();
   </script>
 </body>
