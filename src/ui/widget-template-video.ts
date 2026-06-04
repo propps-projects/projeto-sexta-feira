@@ -35,16 +35,16 @@ export function buildPlayerWidgetHtmlVideo(): string {
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
   html, body { margin:0; padding:0; background:#0a0a0a; color:#f5f5f5; font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif; }
-  body { display:flex; flex-direction:column; }
-  .header { flex:0 0 auto; padding:10px 14px; font-size:13px; line-height:1.3; border-bottom:1px solid #1f1f1f; background:#111; }
+  .header { padding:10px 14px; font-size:13px; line-height:1.3; border-bottom:1px solid #1f1f1f; background:#111; }
   .header strong { color:#fff; }
   .header .sub { color:#aaa; font-size:12px; margin-top:2px; }
-  /* aspect-ratio derives height from the iframe's full width, so the player keeps
-     16:9 even when the host doesn't honor preferred-frame-size precisely. */
-  .player { flex:0 0 auto; position:relative; width:100%; aspect-ratio:16/9; background:#000; }
-  video { position:absolute; inset:0; width:100%; height:100%; display:block; }
-  .msg { position:absolute; inset:0; padding:14px; font-size:13px; display:flex; align-items:center; justify-content:center; text-align:center; color:#888; }
-  .msg.err { color:#f88; }
+  /* Classic "intrinsic ratio" pattern: padding-bottom:56.25% reserves 9/16
+     of the width as vertical space. Works in every browser, doesn't depend
+     on the host honoring preferred-frame-size or aspect-ratio support. */
+  .player-wrap { position:relative; width:100%; padding-bottom:56.25%; height:0; background:#000; }
+  .player-wrap > video { position:absolute; inset:0; width:100%; height:100%; display:block; }
+  .player-wrap > .msg { position:absolute; inset:0; padding:14px; font-size:13px; display:flex; align-items:center; justify-content:center; text-align:center; color:#888; }
+  .player-wrap > .msg.err { color:#f88; }
 </style>
 </head>
 <body>
@@ -52,7 +52,7 @@ export function buildPlayerWidgetHtmlVideo(): string {
     <strong id="title">Carregando aula…</strong>
     <div id="sub" class="sub"></div>
   </div>
-  <div class="player">
+  <div class="player-wrap">
     <video id="v" controls playsinline></video>
     <div id="msg" class="msg" style="display:none">Aguardando dados da aula…</div>
   </div>
