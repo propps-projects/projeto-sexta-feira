@@ -88,6 +88,7 @@ export function buildPlayerWidgetHtml(): string {
         frame.src = buildSrc(data);
       }
 
+      // Data source 1: ChatGPT Apps SDK — window.openai.toolOutput is a sync handle
       function tryRender() {
         if (window.openai && window.openai.toolOutput) {
           render(window.openai.toolOutput);
@@ -103,6 +104,18 @@ export function buildPlayerWidgetHtml(): string {
         window.addEventListener('openai:set_globals', tryRender, false);
         window.addEventListener('openai:tool_response', tryRender, false);
       }
+      // Data source 2: Claude MCP Apps — the @mcp-ui/server mcpApps adapter
+      // performs the ui/initialize handshake with the host and dispatches
+      // 'ui-lifecycle-iframe-render-data' as a window message carrying the
+      // tool result's structuredContent.
+      window.addEventListener('message', function(event) {
+        var msg = event.data;
+        if (!msg || typeof msg !== 'object') return;
+        if (msg.type === 'ui-lifecycle-iframe-render-data') {
+          var d = (msg.payload && (msg.payload.renderData || msg.payload.toolResult || msg.payload)) || null;
+          if (d && (d.embedUrl || d.title)) render(d);
+        }
+      }, false);
     })();
   </script>
 </body>

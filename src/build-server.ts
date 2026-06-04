@@ -1,10 +1,11 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { createUIResource } from "@mcp-ui/server";
 import { z } from "zod";
 import { loadLessons, findLesson, formatDuration, formatTimestamp } from "./lib/lessons.ts";
 import { loadTranscript, excerptFor } from "./lib/transcripts.ts";
 import { openDb, searchChunks } from "./lib/store.ts";
 import { embedQuery } from "./lib/embeddings.ts";
-import { playerResource, type AdapterMode } from "./ui/player.ts";
+import { type AdapterMode } from "./ui/player.ts";
 import { buildPlayerWidgetHtml } from "./ui/widget-template.ts";
 
 // ChatGPT Apps SDK widget URI for the lesson player. Registered as an MCP
@@ -51,60 +52,73 @@ export function buildServer(adapterMode: AdapterMode = "mcpApps"): McpServer {
   // MCP resource. ChatGPT resolves the URI from play_lesson's outputTemplate
   // _meta and renders this HTML in a sandboxed iframe. The HTML reads the
   // tool's structuredContent from window.openai.toolOutput.
-  if (adapterMode === "appsSdk") {
-    const widgetDomain = process.env.WIDGET_DOMAIN;
-    // CSP per https://developers.openai.com/apps-sdk/build/mcp-server#content-security-policy-csp:
-    // the `_meta.ui.csp` goes inside the resource CONTENT returned by the
-    // readCallback, NOT on the registration metadata. Sub-keys are camelCase.
-    const widgetCsp = {
-      connectDomains: [
-        "https://*.tv.pandavideo.com.br",
-        "https://*.pandavideo.com.br",
-        "https://cdn.pandavideo.com",
-      ],
-      resourceDomains: [
-        "https://*.tv.pandavideo.com.br",
-        "https://cdn.pandavideo.com",
-      ],
-      frameDomains: [
-        "https://*.tv.pandavideo.com.br",
-        "https://*.pandavideo.com.br",
-        "https://player-vz-e2643eed-ceb.tv.pandavideo.com.br",
-      ],
-    } as const;
-    server.registerResource(
-      "lesson-player",
-      PLAYER_WIDGET_URI,
-      {
-        title: "Player de Aula",
-        mimeType: "text/html+skybridge",
-        _meta: {
-          "openai/widgetDescription": "Player de vídeo da aula do curso, com deep-link opcional para timestamp.",
-          ...(widgetDomain ? { "openai/widgetDomain": widgetDomain } : {}),
-        },
+  // CSP per https://developers.openai.com/apps-sdk/build/mcp-server (Apps SDK)
+  // and the MCP Apps SEP spec: `_meta.ui.csp` goes inside the resource CONTENT
+  // returned by the readCallback, NOT on the registration metadata. Sub-keys
+  // are camelCase. The same shape works for both ChatGPT and Claude clients.
+  const widgetCsp = {
+    connectDomains: [
+      "https://*.tv.pandavideo.com.br",
+      "https://*.pandavideo.com.br",
+      "https://cdn.pandavideo.com",
+    ],
+    resourceDomains: [
+      "https://*.tv.pandavideo.com.br",
+      "https://cdn.pandavideo.com",
+    ],
+    frameDomains: [
+      "https://*.tv.pandavideo.com.br",
+      "https://*.pandavideo.com.br",
+      "https://player-vz-e2643eed-ceb.tv.pandavideo.com.br",
+    ],
+  } as const;
+  const widgetDomain = process.env.WIDGET_DOMAIN;
+
+  // Build the widget HTML wrapped with the per-host adapter so the host can
+  // perform its initialization handshake and inject tool-result data into
+  // the iframe. appsSdk → MIME text/html+skybridge (ChatGPT); mcpApps →
+  // MIME text/html;profile=mcp-app (Claude + other MCP Apps hosts).
+  const widgetWrapped = createUIResource({
+    uri: PLAYER_WIDGET_URI,
+    content: { type: "rawHtml", htmlString: buildPlayerWidgetHtml() },
+    encoding: "text",
+    adapters: adapterMode === "appsSdk"
+      ? { appsSdk: { enabled: true } }
+      : { mcpApps: { enabled: true } },
+  });
+  const widgetMime = widgetWrapped.resource.mimeType;
+  const widgetText = (widgetWrapped.resource as { text: string }).text;
+
+  server.registerResource(
+    "lesson-player",
+    PLAYER_WIDGET_URI,
+    {
+      title: "Player de Aula",
+      mimeType: widgetMime,
+      _meta: {
+        "openai/widgetDescription": "Player de vídeo da aula do curso, com deep-link opcional para timestamp.",
+        ...(widgetDomain ? { "openai/widgetDomain": widgetDomain } : {}),
       },
-      async (uri) => ({
-        contents: [{
-          uri: uri.toString(),
-          mimeType: "text/html+skybridge",
-          text: buildPlayerWidgetHtml(),
-          _meta: {
-            ui: {
-              csp: widgetCsp,
-            },
-            // Legacy snake_case kept as a belt-and-suspenders compatibility
-            // key; current docs document only `_meta.ui.csp` (camelCase).
-            "openai/widgetCSP": {
-              connect_domains: widgetCsp.connectDomains,
-              resource_domains: widgetCsp.resourceDomains,
-              frame_domains: widgetCsp.frameDomains,
-              redirect_domains: [],
-            },
+    },
+    async (uri) => ({
+      contents: [{
+        uri: uri.toString(),
+        mimeType: widgetMime,
+        text: widgetText,
+        _meta: {
+          // Standard MCP Apps CSP (also read by ChatGPT Apps SDK).
+          ui: { csp: widgetCsp },
+          // Legacy snake_case kept as compatibility belt for older clients.
+          "openai/widgetCSP": {
+            connect_domains: widgetCsp.connectDomains,
+            resource_domains: widgetCsp.resourceDomains,
+            frame_domains: widgetCsp.frameDomains,
+            redirect_domains: [],
           },
-        }],
-      }),
-    );
-  }
+        },
+      }],
+    }),
+  );
 
   server.registerTool(
     "list_lessons",
@@ -261,17 +275,25 @@ export function buildServer(adapterMode: AdapterMode = "mcpApps"): McpServer {
         startSec: z.number().optional(),
       },
       annotations: readOnlyAnnotations,
-      // ChatGPT Apps SDK: this _meta tells the client to render the resource
-      // at the given URI as the widget for this tool's result. Without it,
-      // ChatGPT falls back to the "Arquivo" file card. mcpApps clients ignore.
-      _meta: adapterMode === "appsSdk"
-        ? {
-            "openai/outputTemplate": PLAYER_WIDGET_URI,
-            "openai/toolInvocation/invoking": "Carregando aula...",
-            "openai/toolInvocation/invoked": "Aula carregada",
-            "openai/widgetAccessible": true,
-          }
-        : undefined,
+      // Both ChatGPT Apps SDK and Claude MCP Apps look at a tool-level _meta
+      // pointer to render the registered widget resource as an iframe instead
+      // of the legacy embedded mcp-ui card.
+      //
+      //   • Claude / MCP Apps SEP → `_meta.ui.resourceUri`
+      //   • ChatGPT Apps SDK      → `_meta["openai/outputTemplate"]`
+      //
+      // We declare both. The host honors whichever it understands.
+      _meta: {
+        ui: { resourceUri: PLAYER_WIDGET_URI },
+        ...(adapterMode === "appsSdk"
+          ? {
+              "openai/outputTemplate": PLAYER_WIDGET_URI,
+              "openai/toolInvocation/invoking": "Carregando aula...",
+              "openai/toolInvocation/invoked": "Aula carregada",
+              "openai/widgetAccessible": true,
+            }
+          : {}),
+      },
     },
     async ({ lessonNumber, lessonId, startSec }) => {
       const lesson = findLesson({ lessonId, lessonNumber });
@@ -294,22 +316,19 @@ export function buildServer(adapterMode: AdapterMode = "mcpApps"): McpServer {
         ? `**Aula ${lesson.lessonNumber} — ${lesson.title}** (a partir de ${formatTimestamp(startSec)})`
         : `**Aula ${lesson.lessonNumber} — ${lesson.title}**`;
 
-      // On Apps SDK we omit the embedded resource: ChatGPT renders the widget
-      // from the URI in _meta. Including the resource here is what made it
-      // show as an "Arquivo" file card.
-      if (adapterMode === "appsSdk") {
-        return {
-          content: [{ type: "text", text: label }],
-          structuredContent,
-          _meta: { "openai/outputTemplate": PLAYER_WIDGET_URI },
-        };
-      }
-
-      // On Claude (mcpApps) we keep the embedded MCP-UI resource + the
-      // fallback link, since Claude's MCP UI renderer is the path there.
-      const resource = playerResource(lesson, startSec, adapterMode);
-      const labelClaude = `${label}\n\nSe o player não aparecer aqui, [clica aqui pra abrir no navegador](${directUrl.toString()}).`;
-      return { content: [{ type: "text", text: labelClaude }, resource], structuredContent };
+      // No embedded resource in either path — both hosts render the widget
+      // via the URI declared on the tool _meta. Tool result carries only the
+      // human-readable text + structuredContent (the data the widget reads).
+      return {
+        content: [{ type: "text", text: label }],
+        structuredContent,
+        _meta: {
+          ui: { resourceUri: PLAYER_WIDGET_URI },
+          ...(adapterMode === "appsSdk"
+            ? { "openai/outputTemplate": PLAYER_WIDGET_URI }
+            : {}),
+        },
+      };
     },
   );
 
