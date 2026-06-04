@@ -97,6 +97,10 @@ export function buildServer(adapterMode: AdapterMode = "mcpApps"): McpServer {
     adapters: adapterMode === "appsSdk"
       ? { appsSdk: { enabled: true } }
       : { mcpApps: { enabled: true } },
+    // Hint to the host how much space the widget needs. Without this Claude
+    // collapses the iframe to a thin strip; with it the player gets enough
+    // vertical room for the 16:9 video.
+    uiMetadata: { "preferred-frame-size": ["100%", "480px"] },
   });
   const widgetMime = widgetWrapped.resource.mimeType;
   const widgetText = (widgetWrapped.resource as { text: string }).text;
