@@ -52,6 +52,10 @@ export function buildServer(adapterMode: AdapterMode = "mcpApps"): McpServer {
   // _meta and renders this HTML in a sandboxed iframe. The HTML reads the
   // tool's structuredContent from window.openai.toolOutput.
   if (adapterMode === "appsSdk") {
+    // Optional: a dedicated origin that hosts the widget HTML. Defaults to
+    // OpenAI's sandbox if unset. Settable per-deploy via WIDGET_DOMAIN env
+    // (e.g. "https://agentclass.yourdomain.com" once you have the cert).
+    const widgetDomain = process.env.WIDGET_DOMAIN;
     server.registerResource(
       "lesson-player",
       PLAYER_WIDGET_URI,
@@ -60,18 +64,24 @@ export function buildServer(adapterMode: AdapterMode = "mcpApps"): McpServer {
         mimeType: "text/html+skybridge",
         _meta: {
           "openai/widgetDescription": "Player de vídeo HTML5 + HLS que toca uma aula do curso, com deep-link opcional para timestamp.",
+          // Legacy CSP key REQUIRES snake_case sub-keys. ChatGPT silently
+          // ignores camelCase here and flags the widget as "CSP não definida".
           "openai/widgetCSP": {
-            connectDomains: [
+            connect_domains: [
               "https://*.tv.pandavideo.com.br",
               "https://*.pandavideo.com.br",
               "https://cdn.pandavideo.com",
+              "https://b-vz-e2643eed-ceb.tv.pandavideo.com.br",
             ],
-            frameDomains: [],
-            resourceDomains: [
+            resource_domains: [
               "https://*.tv.pandavideo.com.br",
               "https://cdn.pandavideo.com",
+              "https://b-vz-e2643eed-ceb.tv.pandavideo.com.br",
             ],
+            frame_domains: [],
+            redirect_domains: [],
           },
+          ...(widgetDomain ? { "openai/widgetDomain": widgetDomain } : {}),
         },
       },
       async (uri) => ({
