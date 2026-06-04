@@ -7,6 +7,7 @@ import { openDb, searchChunks } from "./lib/store.ts";
 import { embedQuery } from "./lib/embeddings.ts";
 import { type AdapterMode } from "./ui/player.ts";
 import { buildPlayerWidgetHtml } from "./ui/widget-template.ts";
+import { buildPlayerWidgetHtmlVideo } from "./ui/widget-template-video.ts";
 
 // ChatGPT Apps SDK widget URI for the lesson player. Registered as an MCP
 // resource on /mcp-gpt; referenced from play_lesson's `openai/outputTemplate`.
@@ -76,11 +77,22 @@ export function buildServer(adapterMode: AdapterMode = "mcpApps"): McpServer {
 
   // Build the widget HTML wrapped with the per-host adapter so the host can
   // perform its initialization handshake and inject tool-result data into
-  // the iframe. appsSdk → MIME text/html+skybridge (ChatGPT); mcpApps →
-  // MIME text/html;profile=mcp-app (Claude + other MCP Apps hosts).
+  // the iframe.
+  //   appsSdk  → MIME text/html+skybridge        (ChatGPT) — iframe to Panda
+  //   mcpApps  → MIME text/html;profile=mcp-app  (Claude)  — <video> + hls.js
+  //
+  // ChatGPT honors `frameDomains` so the iframe to Panda works there.
+  // Claude hardcodes `frame-src 'self' blob: data:` (see anthropics/
+  // claude-ai-mcp #54 — closed "not planned"), so we can't iframe out;
+  // try <video> + hls.js (MediaSource Extensions) instead, which only
+  // depends on connect-src (we whitelist Panda there) and media-src
+  // allowing blob: (TBD whether Claude does).
+  const widgetHtml = adapterMode === "appsSdk"
+    ? buildPlayerWidgetHtml()
+    : buildPlayerWidgetHtmlVideo();
   const widgetWrapped = createUIResource({
     uri: PLAYER_WIDGET_URI,
-    content: { type: "rawHtml", htmlString: buildPlayerWidgetHtml() },
+    content: { type: "rawHtml", htmlString: widgetHtml },
     encoding: "text",
     adapters: adapterMode === "appsSdk"
       ? { appsSdk: { enabled: true } }
