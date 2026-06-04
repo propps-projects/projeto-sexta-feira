@@ -105,16 +105,28 @@ export function buildPlayerWidgetHtml(): string {
         window.addEventListener('openai:tool_response', tryRender, false);
       }
       // Data source 2: Claude MCP Apps — the @mcp-ui/server mcpApps adapter
-      // performs the ui/initialize handshake with the host and dispatches
-      // 'ui-lifecycle-iframe-render-data' as a window message carrying the
-      // tool result's structuredContent.
+      // performs the ui/initialize handshake and dispatches a window message
+      //   { type: 'ui-lifecycle-iframe-render-data',
+      //     payload: { renderData: { toolOutput: <full tool result>, ... } } }
+      // The tool result carries structuredContent — that's where our data is.
+      // The adapter fires this multiple times (once on initialize with just
+      // locale/theme, again when the host sends ui/notifications/tool-result
+      // with the actual result), so guard until toolOutput.structuredContent
+      // is populated.
       window.addEventListener('message', function(event) {
         var msg = event.data;
         if (!msg || typeof msg !== 'object') return;
-        if (msg.type === 'ui-lifecycle-iframe-render-data') {
-          var d = (msg.payload && (msg.payload.renderData || msg.payload.toolResult || msg.payload)) || null;
-          if (d && (d.embedUrl || d.title)) render(d);
-        }
+        if (msg.type !== 'ui-lifecycle-iframe-render-data') return;
+        var rd = msg.payload && msg.payload.renderData;
+        if (!rd) return;
+        var tool = rd.toolOutput;
+        if (!tool) return;
+        // toolOutput may be the full result object, or already the inner result.
+        var data = (tool.structuredContent)
+                || (tool.result && tool.result.structuredContent)
+                || (tool.params && tool.params.structuredContent)
+                || tool;
+        if (data && (data.embedUrl || data.title)) render(data);
       }, false);
     })();
   </script>
