@@ -1,0 +1,33 @@
+{
+  "name": "mcp-agentclass",
+  "version": "0.1.0",
+  "description": "MCP server that turns a Panda Video micro-course into an agentic tutor for Claude and ChatGPT",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "ingest:1-fetch": "tsx scripts/1-fetch-lessons.ts",
+    "ingest:2-audio": "tsx scripts/2-extract-audio.ts",
+    "ingest:3-transcribe": "tsx scripts/3-transcribe.ts",
+    "ingest:4-index": "tsx scripts/4-index.ts",
+    "ingest:all": "npm run ingest:1-fetch && npm run ingest:2-audio && npm run ingest:3-transcribe && npm run ingest:4-index",
+    "server": "tsx src/server.ts",
+    "server:http": "tsx src/server-http.ts",
+    "inspect": "npx @modelcontextprotocol/inspector tsx src/server.ts"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^3.0.0",
+    "@mcp-ui/server": "^5.0.0",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "better-sqlite3": "^11.0.0",
+    "dotenv": "^16.4.0",
+    "hls.js": "^1.6.16",
+    "sqlite-vec": "^0.1.6",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

@@ -1,0 +1,585 @@
+{
+  "lessonId": "c8e7bdca-aba4-47a9-9fa7-d2f08e0dc30d",
+  "lessonNumber": 13,
+  "title": "Escalonamento",
+  "language": "portuguese",
+  "durationSec": 569,
+  "segments": [
+    {
+      "start": 0,
+      "end": 7.239999771118164,
+      "text": "Bom turma, quando a gente tá falando de escalonamento, a gente tá falando de uma"
+    },
+    {
+      "start": 7.239999771118164,
+      "end": 14.4399995803833,
+      "text": "forma meio que simples, de como que você expande a sua ação de trabalho, o seu"
+    },
+    {
+      "start": 14.4399995803833,
+      "end": 18.920000076293945,
+      "text": "formato de trabalho, a sua janela de execução, como que você consegue fazer"
+    },
+    {
+      "start": 18.920000076293945,
+      "end": 24.1200008392334,
+      "text": "essa expansão. O que a gente precisa entender é o seguinte, imagine que esse"
+    },
+    {
+      "start": 24.1200008392334,
+      "end": 30.479999542236328,
+      "text": "aqui é você, você é um deve que tá aqui hoje sozinho, só você trabalha, tá tudo"
+    },
+    {
+      "start": 30.479999542236328,
+      "end": 36.47999954223633,
+      "text": "bem, tá tudo certo, sou feliz assim e beleza, e você já sabe que consegue"
+    },
+    {
+      "start": 36.47999954223633,
+      "end": 47.880001068115234,
+      "text": "pegar ali três clientes, tá vendo aqui ó, um, dois, três clientes simultâneos,"
+    },
+    {
+      "start": 47.880001068115234,
+      "end": 54.15999984741211,
+      "text": "é três clientes. Vamos levar em consideração que desses três clientes"
+    },
+    {
+      "start": 54.15999984741211,
+      "end": 58.36000061035156,
+      "text": "que você consegue atender simultaneamente, a média de prazo para"
+    },
+    {
+      "start": 58.36000061035156,
+      "end": 65.68000030517578,
+      "text": "esse cliente ficar preso com você é de seis meses, então a gente tem um, dois, três,"
+    },
+    {
+      "start": 65.68000030517578,
+      "end": 73.23999786376953,
+      "text": "quatro, cinco, seis meses. O que a gente pode considerar aqui? Que você consegue"
+    },
+    {
+      "start": 73.23999786376953,
+      "end": 78.4000015258789,
+      "text": "pegar três clientes simultâneos e desses três clientes simultâneos, eles vão ficar"
+    },
+    {
+      "start": 78.4000015258789,
+      "end": 84.4000015258789,
+      "text": "uma média de seis meses ali com você numa janela de desenvolvimento. Se a gente for"
+    },
+    {
+      "start": 84.4000015258789,
+      "end": 90.44000244140625,
+      "text": "levar em consideração que o ano tem 12 meses, a gente está supondo aqui que você"
+    },
+    {
+      "start": 90.44000244140625,
+      "end": 98.4000015258789,
+      "text": "consegue pegar seis clientes, seis clientes por ano. Aqui eu tô jogando baixo"
+    },
+    {
+      "start": 98.4000015258789,
+      "end": 102.68000030517578,
+      "text": "aqui tá galera, porque cada um é cada um né, aquilo que eu falo né, cada um sabe"
+    },
+    {
+      "start": 102.68000030517578,
+      "end": 106.87999725341797,
+      "text": "onde a ferida machuca mais, vai ter desenvolvedor que consegue pegar 8, 9, 10"
+    },
+    {
+      "start": 106.87999725341797,
+      "end": 110.80000305175781,
+      "text": "clientes, mas vai ter desenvolvedor que vai pegar um pouco menos. Mas vamos supor que"
+    },
+    {
+      "start": 110.80000305175781,
+      "end": 115.45999908447266,
+      "text": "você consegue pegar nessa média aqui, pelo menos seis clientes por ano. Se a"
+    },
+    {
+      "start": 115.45999908447266,
+      "end": 121.44000244140625,
+      "text": "gente fizer uma continha bem de padoca aqui mesmo, uma continha bem de padaria e"
+    },
+    {
+      "start": 121.44000244140625,
+      "end": 125.87999725341797,
+      "text": "levando em consideração, vou levar em consideração aqui um valor de tic-tac-media"
+    },
+    {
+      "start": 125.87999725341797,
+      "end": 131.67999267578125,
+      "text": "que é o valor do desafio aqui do curso. Se você conseguir ali uma média tá, de"
+    },
+    {
+      "start": 131.67999267578125,
+      "end": 139.1199951171875,
+      "text": "50 mil reais por mês e seis clientes, a gente está falando de 300 mil reais por"
+    },
+    {
+      "start": 139.1199951171875,
+      "end": 143.27999877929688,
+      "text": "ano que você consegue. Então se você tem um tic-tac-media de"
+    },
+    {
+      "start": 143.27999877929688,
+      "end": 152.8800048828125,
+      "text": "50 mil por projeto, por cliente, por ano, a gente está falando de 300k por ano que"
+    },
+    {
+      "start": 152.8800048828125,
+      "end": 158.83999633789062,
+      "text": "você consegue, tendo esse limite aqui de atendimento. Isso por mês, por mês, dá uma"
+    },
+    {
+      "start": 158.83999633789062,
+      "end": 165.24000549316406,
+      "text": "média de 25 mil reais de salário por mês, você conseguindo manter essa"
+    },
+    {
+      "start": 165.24000549316406,
+      "end": 169,
+      "text": "frequência. Galera, vou ser bem sincero pra vocês, eu conheço desenvolvedores que"
+    },
+    {
+      "start": 169,
+      "end": 174.24000549316406,
+      "text": "conseguem ter essa frequência de sempre ter ali clientes entrando, clientes ali"
+    },
+    {
+      "start": 174.24000549316406,
+      "end": 178,
+      "text": "dentro da carteira, fidelizando esse cliente. Eu conheço desenvolvedores que"
+    },
+    {
+      "start": 178,
+      "end": 183.9600067138672,
+      "text": "nem querem ter 7, 8, 9, 10 clientes, eles querem ficar ali com 7 clientezinhos"
+    },
+    {
+      "start": 183.9600067138672,
+      "end": 189.47999572753906,
+      "text": "mantendo esses clientes ali, tá tudo bem, eu respeito. Tem gente que tem ambições"
+    },
+    {
+      "start": 189.47999572753906,
+      "end": 193.1999969482422,
+      "text": "maiores de ser só freehousing, tem muita gente, tem desenvolvedores que quer tá"
+    },
+    {
+      "start": 193.1999969482422,
+      "end": 195.47999572753906,
+      "text": "tranquilo ali sendo freelancer e tá tudo bem."
+    },
+    {
+      "start": 195.47999572753906,
+      "end": 200,
+      "text": "Então você entendendo esse processo de produtificação, organização, esteira de"
+    },
+    {
+      "start": 200,
+      "end": 204.8000030517578,
+      "text": "produto, metodologia, marketing, como que você vende, você tem a possibilidade de"
+    },
+    {
+      "start": 204.8000030517578,
+      "end": 211.1199951171875,
+      "text": "ter uma projeção de ganhos fazendo o mínimo bem feito e olhando o mínimo que"
+    },
+    {
+      "start": 211.1199951171875,
+      "end": 215.9600067138672,
+      "text": "você consegue atender, a gente está falando aqui de uma projeção de 300 mil"
+    },
+    {
+      "start": 215.9600067138672,
+      "end": 220.63999938964844,
+      "text": "reais por ano a 25 mil reais de salário, que é a média que você ganharia ali"
+    },
+    {
+      "start": 220.63999938964844,
+      "end": 225.67999267578125,
+      "text": "mensalmente. Óbvio, aí tem imposto, tem taxa, tem custo, isso aqui a gente estava falando de"
+    },
+    {
+      "start": 225.67999267578125,
+      "end": 230.1999969482422,
+      "text": "lucro e varia de cada um, o teu custo pode ser diferente do meu, enfim, existem"
+    },
+    {
+      "start": 230.1999969482422,
+      "end": 234.47999572753906,
+      "text": "outras variáveis, mas vamos pensar aqui comigo o seguinte, você tem uma habilidade"
+    },
+    {
+      "start": 234.47999572753906,
+      "end": 240.39999389648438,
+      "text": "técnica, essa habilidade técnica te dá a possibilidade de vender projetos de 50"
+    },
+    {
+      "start": 240.39999389648438,
+      "end": 244.0800018310547,
+      "text": "mil reais para um cliente e projetos que você pode trabalhar talvez na média de"
+    },
+    {
+      "start": 244.0800018310547,
+      "end": 249.8000030517578,
+      "text": "seis meses. Galera, é só analisar, a gente está falando de 25 mil reais por mês se"
+    },
+    {
+      "start": 249.8000030517578,
+      "end": 254.9199981689453,
+      "text": "você fizer um trabalho de conseguir pelo menos seis clientes, seis clientes por"
+    },
+    {
+      "start": 254.9199981689453,
+      "end": 260.760009765625,
+      "text": "ano, que é pouquíssimo, pouquíssimo, seis clientes por ano é pouquíssimo, é fazer o"
+    },
+    {
+      "start": 260.760009765625,
+      "end": 264.3999938964844,
+      "text": "trabalho mínimo do mínimo do mínimo do mínimo para conseguir seis clientes, tá?"
+    },
+    {
+      "start": 264.6400146484375,
+      "end": 269.79998779296875,
+      "text": "Então, analisa bem esse cenário aqui, porque pode acontecer de você querer mais,"
+    },
+    {
+      "start": 269.79998779296875,
+      "end": 274.3599853515625,
+      "text": "cara, pô, eu quero mais, se eu sozinho eu consigo atender seis clientes,"
+    },
+    {
+      "start": 274.3599853515625,
+      "end": 281.67999267578125,
+      "text": "se eu trouxer mais um desenvolvedor, eu não consigo seis, eu consigo 12, então 12 por"
+    },
+    {
+      "start": 281.67999267578125,
+      "end": 286.7200012207031,
+      "text": "ano, então eu já salto de 300 mil reais para 600 mil reais,"
+    },
+    {
+      "start": 286.7200012207031,
+      "end": 289.67999267578125,
+      "text": "tudo bem que eu vou aumentar agora o meu custo, porque eu tenho mais um"
+    },
+    {
+      "start": 289.67999267578125,
+      "end": 295.8399963378906,
+      "text": "desenvolvedor para pagar, mas eu estou aumentando o meu faturamento, então de"
+    },
+    {
+      "start": 295.8399963378906,
+      "end": 299.9200134277344,
+      "text": "300 eu já salto para 600, como você também está inflando um pouco a sua"
+    },
+    {
+      "start": 299.9200134277344,
+      "end": 303.239990234375,
+      "text": "estrutura, você não vai vender mais projetos a 50 mil, isso porque eu coloquei o"
+    },
+    {
+      "start": 303.239990234375,
+      "end": 306.9599914550781,
+      "text": "ticket médio de 50, mas você pode vender projetos de 70, 80, 90, 100, 200,"
+    },
+    {
+      "start": 306.9599914550781,
+      "end": 310.6400146484375,
+      "text": "então você tem essa possibilidade também de começar também a trabalhar"
+    },
+    {
+      "start": 310.6400146484375,
+      "end": 313.9599914550781,
+      "text": "valores um pouco mais altos, conforme você vai ficando mais profissional, com mais"
+    },
+    {
+      "start": 313.9599914550781,
+      "end": 319,
+      "text": "segurança, você vai tendo mais aquela confiança de fechar e de vender projetos,"
+    },
+    {
+      "start": 319,
+      "end": 322.3599853515625,
+      "text": "você pode cobrar realmente um pouco mais caro por isso, então a gente está"
+    },
+    {
+      "start": 322.3599853515625,
+      "end": 327.67999267578125,
+      "text": "falando aí de 300 mil reais trabalhando sozinho, tendo essa janela de até seis"
+    },
+    {
+      "start": 327.67999267578125,
+      "end": 330.9599914550781,
+      "text": "clientes no ano, mas agora eu quero um pouco mais, então vou pegar mais um"
+    },
+    {
+      "start": 330.9599914550781,
+      "end": 334.4800109863281,
+      "text": "desenvolvedor, mais um desenvolvedor, eu já sei que consigo aumentar a minha"
+    },
+    {
+      "start": 334.4800109863281,
+      "end": 339.0400085449219,
+      "text": "carga de 300 mil, de seis clientes para 12 clientes, onde eu posso"
+    },
+    {
+      "start": 339.0400085449219,
+      "end": 344.67999267578125,
+      "text": "faturar pelo menos 600 mil, agora, Rafa, eu estou maluco, eu quero"
+    },
+    {
+      "start": 344.8399963378906,
+      "end": 349.67999267578125,
+      "text": "para cima, vamos embora, vou trazer mais um desenvolvedor, agora você está triplicando a"
+    },
+    {
+      "start": 349.67999267578125,
+      "end": 353.9599914550781,
+      "text": "sua janela de desenvolvimento, então o que você poderia pegar sozinho de seis"
+    },
+    {
+      "start": 353.9599914550781,
+      "end": 358.8399963378906,
+      "text": "clientes, agora você vai pegar 18 clientes, então aí você vai já para quase um potencial"
+    },
+    {
+      "start": 358.8399963378906,
+      "end": 363.2799987792969,
+      "text": "de um milhão de faturamento, se você for vender projetos na média de 50 mil"
+    },
+    {
+      "start": 363.2799987792969,
+      "end": 368.0400085449219,
+      "text": "reais, Rafa, é impossível? Não é impossível, galera, não é impossível, é totalmente"
+    },
+    {
+      "start": 368.0400085449219,
+      "end": 373.8800048828125,
+      "text": "possível, tudo depende da tua sede, da tua fome, o que você pensa para o médio,"
+    },
+    {
+      "start": 373.8800048828125,
+      "end": 380.0400085449219,
+      "text": "para o longo prazo, o que eu gosto de direcionar, ganhe o jogo do freelancer"
+    },
+    {
+      "start": 380.0400085449219,
+      "end": 384.44000244140625,
+      "text": "primeiro, ganhe o jogo do freelancer, cara, vai lá, fecha o primeiro cliente, corre atrás do"
+    },
+    {
+      "start": 384.44000244140625,
+      "end": 388.44000244140625,
+      "text": "segundo, corre atrás do terceiro, você conseguiu já três clientes, você já"
+    },
+    {
+      "start": 388.44000244140625,
+      "end": 393.4800109863281,
+      "text": "conseguindo três clientes, isso já vai te dar uma bagagem e uma experiência de"
+    },
+    {
+      "start": 393.4800109863281,
+      "end": 399.0799865722656,
+      "text": "organização, de desenvolvimento, de gestão com clientes, de comunicação, quando você"
+    },
+    {
+      "start": 399.0799865722656,
+      "end": 404.3599853515625,
+      "text": "for fechar os próximos três, você já passou por todos os desafios, obstáculos,"
+    },
+    {
+      "start": 404.3599853515625,
+      "end": 408.239990234375,
+      "text": "ajustes e melhorias que você já percebeu que você precisaria fazer com os seus"
+    },
+    {
+      "start": 408.239990234375,
+      "end": 412.760009765625,
+      "text": "três primeiros, então os próximos três, você vai ver que o fluxo vai ser mais"
+    },
+    {
+      "start": 412.760009765625,
+      "end": 416.760009765625,
+      "text": "fluido, ele vai ser mais tranquilo, ele já vai ser menos árduo para você"
+    },
+    {
+      "start": 416.760009765625,
+      "end": 421.0799865722656,
+      "text": "realmente se adaptar, geralmente o que acontece, os desenvolvedores pegam o"
+    },
+    {
+      "start": 421.0799865722656,
+      "end": 426.5199890136719,
+      "text": "primeiro ano ali para fazer esse teste de três clientes e aumentar para mais"
+    },
+    {
+      "start": 426.5199890136719,
+      "end": 431.3599853515625,
+      "text": "três, fechar uma média de 5, 6 clientes no ano e conseguir essa média de"
+    },
+    {
+      "start": 431.3599853515625,
+      "end": 435.8800048828125,
+      "text": "faturamento de 300 mil reais fechando projetos ali numa média de 50 e aí no"
+    },
+    {
+      "start": 435.8800048828125,
+      "end": 440.9200134277344,
+      "text": "segundo ano, ele já pensa realmente assim, cara, esse ano atendi seis clientes, agora"
+    },
+    {
+      "start": 440.9200134277344,
+      "end": 445.3599853515625,
+      "text": "eu já sei tudo que eu preciso corrigir, de processo, de metodologia, como que eu"
+    },
+    {
+      "start": 445.3599853515625,
+      "end": 448.79998779296875,
+      "text": "posso ajustar ali a minha etapa de produção, a minha esteira de produção,"
+    },
+    {
+      "start": 448.79998779296875,
+      "end": 453.20001220703125,
+      "text": "próximo ano agora eu vou duplicar a quantidade de clientes que eu tenho na"
+    },
+    {
+      "start": 453.20001220703125,
+      "end": 458.0400085449219,
+      "text": "casa, então já que eu já tenho seis, eu vou renovar esses seis, eu vou agora"
+    },
+    {
+      "start": 458.0400085449219,
+      "end": 463.0400085449219,
+      "text": "atrás de mais seis clientes e aí lá na frente, quando você vencer esse jogo aqui"
+    },
+    {
+      "start": 463.0400085449219,
+      "end": 467.6400146484375,
+      "text": "de desenvolvedor, de prestador de serviço, você trabalhar sozinho, de ter a sua"
+    },
+    {
+      "start": 467.6400146484375,
+      "end": 472.6400146484375,
+      "text": "urgência, aí lá na frente você vai com um ponto de inflexão, se você quer aumentar"
+    },
+    {
+      "start": 472.6400146484375,
+      "end": 477.6400146484375,
+      "text": "sua capacidade operacional e sair de um desenvolvedor para uma software house e"
+    },
+    {
+      "start": 477.6400146484375,
+      "end": 481.79998779296875,
+      "text": "contratar outras pessoas ou se você vai continuar sendo desenvolvedor, prestador"
+    },
+    {
+      "start": 481.79998779296875,
+      "end": 486.0400085449219,
+      "text": "de serviço, vai manter ali uma carteira fechadinha de seis clientes mais ou menos"
+    },
+    {
+      "start": 486.0400085449219,
+      "end": 491.1600036621094,
+      "text": "ali, mantendo esse faturamento seu de aproximadamente 300 mil reais por ano ou"
+    },
+    {
+      "start": 491.1600036621094,
+      "end": 495.239990234375,
+      "text": "vai pensar agora em fazer um SaaS, fazer um micro SaaS, criar algumas esteiras de"
+    },
+    {
+      "start": 495.239990234375,
+      "end": 500.2799987792969,
+      "text": "produtos para diversificar sua fonte de receita. Então o processo de escalonamento,"
+    },
+    {
+      "start": 500.2799987792969,
+      "end": 504.2799987792969,
+      "text": "o processo de expansão, o processo de escala, existem várias formas, existem"
+    },
+    {
+      "start": 504.2799987792969,
+      "end": 507.760009765625,
+      "text": "várias variáveis que você pode analisar, pode olhar e falar, cara, eu vou seguir esse"
+    },
+    {
+      "start": 507.760009765625,
+      "end": 512.3200073242188,
+      "text": "caminho, não, eu vou seguir esse daqui. O mais importante é que você vença"
+    },
+    {
+      "start": 512.3200073242188,
+      "end": 516.1599731445312,
+      "text": "primeiro esse jogo de prestação de serviço, foque em fechar o primeiro"
+    },
+    {
+      "start": 516.1599731445312,
+      "end": 520.5599975585938,
+      "text": "cliente ali cobrando 50 mil, depois o segundo cobrando 50 mil, depois o terceiro"
+    },
+    {
+      "start": 520.5599975585938,
+      "end": 525.4000244140625,
+      "text": "cobrando 50 mil e assim você vai pegando experiência. Se conseguir fechar uma"
+    },
+    {
+      "start": 525.4000244140625,
+      "end": 529.0800170898438,
+      "text": "carteira de seis clientes, você já ganhou o jogo da prestação de"
+    },
+    {
+      "start": 529.0800170898438,
+      "end": 533.3599853515625,
+      "text": "serviço e nessa média, no chiquitimédio de 50 mil reais, você já venceu o jogo da"
+    },
+    {
+      "start": 533.3599853515625,
+      "end": 536.47998046875,
+      "text": "prestação de serviço porque a gente está falando de um faturamento médio em um"
+    },
+    {
+      "start": 536.47998046875,
+      "end": 543.7999877929688,
+      "text": "ano de 300 mil reais, onde já coloca você à frente aí da maioria dos brasileiros."
+    },
+    {
+      "start": 543.7999877929688,
+      "end": 547.47998046875,
+      "text": "Então vença primeiro o jogo da prestação de serviço, vença primeiro o"
+    },
+    {
+      "start": 547.47998046875,
+      "end": 551.4400024414062,
+      "text": "jogo de ter uma carteira fechadinha de clientes, você conseguindo faturar"
+    },
+    {
+      "start": 551.4400024414062,
+      "end": 555.2000122070312,
+      "text": "mensalmente, fazendo um bom trabalho, entregando bons projetos, você"
+    },
+    {
+      "start": 555.2000122070312,
+      "end": 559.2000122070312,
+      "text": "realmente fidelizando o teu cliente e aí depois você pensa no processo de"
+    },
+    {
+      "start": 559.2000122070312,
+      "end": 561.719970703125,
+      "text": "escalonamento."
+    },
+    {
+      "start": 566.47998046875,
+      "end": 570.1599731445312,
+      "text": "Legendas pela comunidade Amara.org"
+    }
+  ],
+  "fullText": "Bom turma, quando a gente tá falando de escalonamento, a gente tá falando de uma forma meio que simples, de como que você expande a sua ação de trabalho, o seu formato de trabalho, a sua janela de execução, como que você consegue fazer essa expansão. O que a gente precisa entender é o seguinte, imagine que esse aqui é você, você é um deve que tá aqui hoje sozinho, só você trabalha, tá tudo bem, tá tudo certo, sou feliz assim e beleza, e você já sabe que consegue pegar ali três clientes, tá vendo aqui ó, um, dois, três clientes simultâneos, é três clientes. Vamos levar em consideração que desses três clientes que você consegue atender simultaneamente, a média de prazo para esse cliente ficar preso com você é de seis meses, então a gente tem um, dois, três, quatro, cinco, seis meses. O que a gente pode considerar aqui? Que você consegue pegar três clientes simultâneos e desses três clientes simultâneos, eles vão ficar uma média de seis meses ali com você numa janela de desenvolvimento. Se a gente for levar em consideração que o ano tem 12 meses, a gente está supondo aqui que você consegue pegar seis clientes, seis clientes por ano. Aqui eu tô jogando baixo aqui tá galera, porque cada um é cada um né, aquilo que eu falo né, cada um sabe onde a ferida machuca mais, vai ter desenvolvedor que consegue pegar 8, 9, 10 clientes, mas vai ter desenvolvedor que vai pegar um pouco menos. Mas vamos supor que você consegue pegar nessa média aqui, pelo menos seis clientes por ano. Se a gente fizer uma continha bem de padoca aqui mesmo, uma continha bem de padaria e levando em consideração, vou levar em consideração aqui um valor de tic-tac-media que é o valor do desafio aqui do curso. Se você conseguir ali uma média tá, de 50 mil reais por mês e seis clientes, a gente está falando de 300 mil reais por ano que você consegue. Então se você tem um tic-tac-media de 50 mil por projeto, por cliente, por ano, a gente está falando de 300k por ano que você consegue, tendo esse limite aqui de atendimento. Isso por mês, por mês, dá uma média de 25 mil reais de salário por mês, você conseguindo manter essa frequência. Galera, vou ser bem sincero pra vocês, eu conheço desenvolvedores que conseguem ter essa frequência de sempre ter ali clientes entrando, clientes ali dentro da carteira, fidelizando esse cliente. Eu conheço desenvolvedores que nem querem ter 7, 8, 9, 10 clientes, eles querem ficar ali com 7 clientezinhos mantendo esses clientes ali, tá tudo bem, eu respeito. Tem gente que tem ambições maiores de ser só freehousing, tem muita gente, tem desenvolvedores que quer tá tranquilo ali sendo freelancer e tá tudo bem. Então você entendendo esse processo de produtificação, organização, esteira de produto, metodologia, marketing, como que você vende, você tem a possibilidade de ter uma projeção de ganhos fazendo o mínimo bem feito e olhando o mínimo que você consegue atender, a gente está falando aqui de uma projeção de 300 mil reais por ano a 25 mil reais de salário, que é a média que você ganharia ali mensalmente. Óbvio, aí tem imposto, tem taxa, tem custo, isso aqui a gente estava falando de lucro e varia de cada um, o teu custo pode ser diferente do meu, enfim, existem outras variáveis, mas vamos pensar aqui comigo o seguinte, você tem uma habilidade técnica, essa habilidade técnica te dá a possibilidade de vender projetos de 50 mil reais para um cliente e projetos que você pode trabalhar talvez na média de seis meses. Galera, é só analisar, a gente está falando de 25 mil reais por mês se você fizer um trabalho de conseguir pelo menos seis clientes, seis clientes por ano, que é pouquíssimo, pouquíssimo, seis clientes por ano é pouquíssimo, é fazer o trabalho mínimo do mínimo do mínimo do mínimo para conseguir seis clientes, tá? Então, analisa bem esse cenário aqui, porque pode acontecer de você querer mais, cara, pô, eu quero mais, se eu sozinho eu consigo atender seis clientes, se eu trouxer mais um desenvolvedor, eu não consigo seis, eu consigo 12, então 12 por ano, então eu já salto de 300 mil reais para 600 mil reais, tudo bem que eu vou aumentar agora o meu custo, porque eu tenho mais um desenvolvedor para pagar, mas eu estou aumentando o meu faturamento, então de 300 eu já salto para 600, como você também está inflando um pouco a sua estrutura, você não vai vender mais projetos a 50 mil, isso porque eu coloquei o ticket médio de 50, mas você pode vender projetos de 70, 80, 90, 100, 200, então você tem essa possibilidade também de começar também a trabalhar valores um pouco mais altos, conforme você vai ficando mais profissional, com mais segurança, você vai tendo mais aquela confiança de fechar e de vender projetos, você pode cobrar realmente um pouco mais caro por isso, então a gente está falando aí de 300 mil reais trabalhando sozinho, tendo essa janela de até seis clientes no ano, mas agora eu quero um pouco mais, então vou pegar mais um desenvolvedor, mais um desenvolvedor, eu já sei que consigo aumentar a minha carga de 300 mil, de seis clientes para 12 clientes, onde eu posso faturar pelo menos 600 mil, agora, Rafa, eu estou maluco, eu quero para cima, vamos embora, vou trazer mais um desenvolvedor, agora você está triplicando a sua janela de desenvolvimento, então o que você poderia pegar sozinho de seis clientes, agora você vai pegar 18 clientes, então aí você vai já para quase um potencial de um milhão de faturamento, se você for vender projetos na média de 50 mil reais, Rafa, é impossível? Não é impossível, galera, não é impossível, é totalmente possível, tudo depende da tua sede, da tua fome, o que você pensa para o médio, para o longo prazo, o que eu gosto de direcionar, ganhe o jogo do freelancer primeiro, ganhe o jogo do freelancer, cara, vai lá, fecha o primeiro cliente, corre atrás do segundo, corre atrás do terceiro, você conseguiu já três clientes, você já conseguindo três clientes, isso já vai te dar uma bagagem e uma experiência de organização, de desenvolvimento, de gestão com clientes, de comunicação, quando você for fechar os próximos três, você já passou por todos os desafios, obstáculos, ajustes e melhorias que você já percebeu que você precisaria fazer com os seus três primeiros, então os próximos três, você vai ver que o fluxo vai ser mais fluido, ele vai ser mais tranquilo, ele já vai ser menos árduo para você realmente se adaptar, geralmente o que acontece, os desenvolvedores pegam o primeiro ano ali para fazer esse teste de três clientes e aumentar para mais três, fechar uma média de 5, 6 clientes no ano e conseguir essa média de faturamento de 300 mil reais fechando projetos ali numa média de 50 e aí no segundo ano, ele já pensa realmente assim, cara, esse ano atendi seis clientes, agora eu já sei tudo que eu preciso corrigir, de processo, de metodologia, como que eu posso ajustar ali a minha etapa de produção, a minha esteira de produção, próximo ano agora eu vou duplicar a quantidade de clientes que eu tenho na casa, então já que eu já tenho seis, eu vou renovar esses seis, eu vou agora atrás de mais seis clientes e aí lá na frente, quando você vencer esse jogo aqui de desenvolvedor, de prestador de serviço, você trabalhar sozinho, de ter a sua urgência, aí lá na frente você vai com um ponto de inflexão, se você quer aumentar sua capacidade operacional e sair de um desenvolvedor para uma software house e contratar outras pessoas ou se você vai continuar sendo desenvolvedor, prestador de serviço, vai manter ali uma carteira fechadinha de seis clientes mais ou menos ali, mantendo esse faturamento seu de aproximadamente 300 mil reais por ano ou vai pensar agora em fazer um SaaS, fazer um micro SaaS, criar algumas esteiras de produtos para diversificar sua fonte de receita. Então o processo de escalonamento, o processo de expansão, o processo de escala, existem várias formas, existem várias variáveis que você pode analisar, pode olhar e falar, cara, eu vou seguir esse caminho, não, eu vou seguir esse daqui. O mais importante é que você vença primeiro esse jogo de prestação de serviço, foque em fechar o primeiro cliente ali cobrando 50 mil, depois o segundo cobrando 50 mil, depois o terceiro cobrando 50 mil e assim você vai pegando experiência. Se conseguir fechar uma carteira de seis clientes, você já ganhou o jogo da prestação de serviço e nessa média, no chiquitimédio de 50 mil reais, você já venceu o jogo da prestação de serviço porque a gente está falando de um faturamento médio em um ano de 300 mil reais, onde já coloca você à frente aí da maioria dos brasileiros. Então vença primeiro o jogo da prestação de serviço, vença primeiro o jogo de ter uma carteira fechadinha de clientes, você conseguindo faturar mensalmente, fazendo um bom trabalho, entregando bons projetos, você realmente fidelizando o teu cliente e aí depois você pensa no processo de escalonamento. Legendas pela comunidade Amara.org"
+}

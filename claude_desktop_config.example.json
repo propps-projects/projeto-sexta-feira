@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "agentclass": {
+      "command": "npx",
+      "args": ["tsx", "/Users/rafaelalmeidasouza/Documents/mcp-agentclass/src/server.ts"],
+      "cwd": "/Users/rafaelalmeidasouza/Documents/mcp-agentclass"
+    }
+  }
+}

@@ -1,0 +1,10 @@
+node_modules/
+.env
+panda-key
+data/audio/
+# Keep transcripts + vectors.db committed so the Docker image is self-contained.
+# Audio WAVs and SQLite WAL/SHM files are still ignored.
+data/vectors.db-wal
+data/vectors.db-shm
+.DS_Store
+*.log

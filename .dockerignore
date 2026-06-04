@@ -1,0 +1,17 @@
+node_modules
+.env
+.env.local
+.env.*.local
+panda-key
+data/audio
+data/audio/**
+.git
+.gitignore
+.DS_Store
+.claude
+.claude/**
+*.log
+npm-debug.log*
+yarn-error.log
+.vscode
+.idea

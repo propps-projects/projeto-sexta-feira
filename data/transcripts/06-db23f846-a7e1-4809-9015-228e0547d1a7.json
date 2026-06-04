@@ -1,0 +1,105 @@
+{
+  "lessonId": "db23f846-a7e1-4809-9015-228e0547d1a7",
+  "lessonNumber": 6,
+  "title": "Esteira de Produção",
+  "language": "portuguese",
+  "durationSec": 182,
+  "segments": [
+    {
+      "start": 0,
+      "end": 13,
+      "text": "Turma, quando a gente fala sobre mapear esteira de produção, é basicamente você ter um processo muito bem definido de entrega, de desenvolvimento,"
+    },
+    {
+      "start": 13,
+      "end": 22,
+      "text": "um processo muito bem mapeado operacionalmente. A gente vai ter um módulo específico de metodologia, mas o que eu quero já ressaltar aqui,"
+    },
+    {
+      "start": 22,
+      "end": 34,
+      "text": "nesse processo de você entender sobre produtificação, é que pode ser que você escolha um processo de já ter soluções basicamente prontas,"
+    },
+    {
+      "start": 34,
+      "end": 40,
+      "text": "ou a base dessas soluções prontas para você desenvolver e entregar para o seu perfil de cliente ideal."
+    },
+    {
+      "start": 40,
+      "end": 52,
+      "text": "Claro, quando você tem soluções já prontas ou a base preparada, você já consegue, querendo ou não, ter uma aceleração do que começar literalmente do zero."
+    },
+    {
+      "start": 52,
+      "end": 62,
+      "text": "Mas mesmo que você comece do absoluto zero, você também já tem uma compreensão muito grande do que vai ser feito uma vez que você já mapeou os tipos de soluções"
+    },
+    {
+      "start": 62,
+      "end": 72,
+      "text": "que você pode entregar para o seu usuário. Então, quando a gente fala sobre o processo de esteira de produção, é como se dentro da sua esteira de produção,"
+    },
+    {
+      "start": 72,
+      "end": 81,
+      "text": "cada caixinha dessa aqui fosse específica para algo que você precisa executar para desenvolver o projeto do cliente."
+    },
+    {
+      "start": 81,
+      "end": 94,
+      "text": "Então, é como se na primeira caixinha aqui fosse a caixinha do design, a segunda caixinha é a caixinha do front, a terceira caixinha, por exemplo, do back-end,"
+    },
+    {
+      "start": 94,
+      "end": 103,
+      "text": "a quarta caixinha aqui é a caixinha das APIs e a última caixinha é como se fosse a caixinha dos testes."
+    },
+    {
+      "start": 103,
+      "end": 112,
+      "text": "É como se você fizesse dentro da sua esteira de produção, cada caixa é uma etapa que você vai cumprir para entregar aquela solução."
+    },
+    {
+      "start": 112,
+      "end": 118,
+      "text": "Quando você fecha um novo cliente, ele vai passar por essas mesmas etapas, por esses mesmos processos."
+    },
+    {
+      "start": 118,
+      "end": 127,
+      "text": "Assim você consegue ter uma gestão e um controle muito maior na hora de você desenvolver, na hora de você executar o projeto,"
+    },
+    {
+      "start": 127,
+      "end": 133,
+      "text": "o produto que você se colocou à disposição para desenvolver para o seu potencial cliente."
+    },
+    {
+      "start": 133,
+      "end": 143,
+      "text": "Então, quando a gente fala para você mapear a sua esteira de produção, é simplesmente para você realmente ter muito bem definido o seu processo de desenvolvimento,"
+    },
+    {
+      "start": 143,
+      "end": 145,
+      "text": "o seu método de desenvolvimento."
+    },
+    {
+      "start": 145,
+      "end": 154,
+      "text": "Aqui realmente é só uma breve introdução para você entender esse conceito, mas com certeza no nosso módulo de metodologia"
+    },
+    {
+      "start": 154,
+      "end": 163,
+      "text": "eu vou me aprofundar muito mais para que você entenda um pouco como que funciona esse processo de criar uma metodologia de desenvolvimento,"
+    },
+    {
+      "start": 163,
+      "end": 173,
+      "text": "uma metodologia onde o teu cliente sabe exatamente o que vai ser feito, como vai ser feito, quais são as etapas que compõem essa sua esteira de produção."
+    }
+  ],
+  "fullText": "Turma, quando a gente fala sobre mapear esteira de produção, é basicamente você ter um processo muito bem definido de entrega, de desenvolvimento, um processo muito bem mapeado operacionalmente. A gente vai ter um módulo específico de metodologia, mas o que eu quero já ressaltar aqui, nesse processo de você entender sobre produtificação, é que pode ser que você escolha um processo de já ter soluções basicamente prontas, ou a base dessas soluções prontas para você desenvolver e entregar para o seu perfil de cliente ideal. Claro, quando você tem soluções já prontas ou a base preparada, você já consegue, querendo ou não, ter uma aceleração do que começar literalmente do zero. Mas mesmo que você comece do absoluto zero, você também já tem uma compreensão muito grande do que vai ser feito uma vez que você já mapeou os tipos de soluções que você pode entregar para o seu usuário. Então, quando a gente fala sobre o processo de esteira de produção, é como se dentro da sua esteira de produção, cada caixinha dessa aqui fosse específica para algo que você precisa executar para desenvolver o projeto do cliente. Então, é como se na primeira caixinha aqui fosse a caixinha do design, a segunda caixinha é a caixinha do front, a terceira caixinha, por exemplo, do back-end, a quarta caixinha aqui é a caixinha das APIs e a última caixinha é como se fosse a caixinha dos testes. É como se você fizesse dentro da sua esteira de produção, cada caixa é uma etapa que você vai cumprir para entregar aquela solução. Quando você fecha um novo cliente, ele vai passar por essas mesmas etapas, por esses mesmos processos. Assim você consegue ter uma gestão e um controle muito maior na hora de você desenvolver, na hora de você executar o projeto, o produto que você se colocou à disposição para desenvolver para o seu potencial cliente. Então, quando a gente fala para você mapear a sua esteira de produção, é simplesmente para você realmente ter muito bem definido o seu processo de desenvolvimento, o seu método de desenvolvimento. Aqui realmente é só uma breve introdução para você entender esse conceito, mas com certeza no nosso módulo de metodologia eu vou me aprofundar muito mais para que você entenda um pouco como que funciona esse processo de criar uma metodologia de desenvolvimento, uma metodologia onde o teu cliente sabe exatamente o que vai ser feito, como vai ser feito, quais são as etapas que compõem essa sua esteira de produção."
+}

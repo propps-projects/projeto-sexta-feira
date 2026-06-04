@@ -1,0 +1,460 @@
+{
+  "lessonId": "9dda81b5-b334-4b6b-a521-1e0c62a4158b",
+  "lessonNumber": 12,
+  "title": "Recorrência",
+  "language": "portuguese",
+  "durationSec": 490,
+  "segments": [
+    {
+      "start": 0,
+      "end": 7.039999961853027,
+      "text": "Fala comigo turma! Quando eu digo pra vocês foquem na receita recorrente, vocês"
+    },
+    {
+      "start": 7.039999961853027,
+      "end": 13.600000381469727,
+      "text": "acabam não entendendo muitos motivos. E pra ilustrar de uma forma até que bem"
+    },
+    {
+      "start": 13.600000381469727,
+      "end": 19.040000915527344,
+      "text": "simples aqui pra vocês, eu fiz um exercício de como que vocês podem olhar"
+    },
+    {
+      "start": 19.040000915527344,
+      "end": 23,
+      "text": "pro médio, pro longo prazo, olhar para o fluxo de receita recorrente, olhar para o"
+    },
+    {
+      "start": 23,
+      "end": 28.1200008392334,
+      "text": "fluxo de mensalidades, pra você entender mais ou menos o potencial de ganhos que"
+    },
+    {
+      "start": 28.1200008392334,
+      "end": 33.20000076293945,
+      "text": "você tem à sua disposição, mas que às vezes por você não ter isso muito visível,"
+    },
+    {
+      "start": 33.20000076293945,
+      "end": 39.400001525878906,
+      "text": "você acaba deixando passar aí algumas coisas. O que eu quero que vocês analisem"
+    },
+    {
+      "start": 39.400001525878906,
+      "end": 46.91999816894531,
+      "text": "desse gráfico aqui? Imagina que nós temos aqui a quantidade de"
+    },
+    {
+      "start": 46.91999816894531,
+      "end": 55.880001068115234,
+      "text": "clientes que eu posso atender em um ano, quantidade de clientes que eu posso"
+    },
+    {
+      "start": 55.880001068115234,
+      "end": 60.880001068115234,
+      "text": "atender em um ano. E eu peguei uma média aqui de seis meses pra cada projeto, pra"
+    },
+    {
+      "start": 60.880001068115234,
+      "end": 67.5999984741211,
+      "text": "cada cliente. Então imagina que de janeiro a junho eu vou ter um cliente, de fevereiro"
+    },
+    {
+      "start": 67.5999984741211,
+      "end": 73.44000244140625,
+      "text": "até maio eu vou estar com três clientes, então vou estar com esses três clientes, de"
+    },
+    {
+      "start": 73.44000244140625,
+      "end": 81.68000030517578,
+      "text": "junho até mais ou menos ali, até dezembro eu vou estar entre quatro e cinco"
+    },
+    {
+      "start": 81.68000030517578,
+      "end": 86.19999694824219,
+      "text": "clientes, então eu vou estar batendo basicamente seis clientes o ano inteiro."
+    },
+    {
+      "start": 86.19999694824219,
+      "end": 93.19999694824219,
+      "text": "O que está verdinho aqui é V1, o que está em laranja ou marrom pra vocês aí é"
+    },
+    {
+      "start": 93.19999694824219,
+      "end": 97.76000213623047,
+      "text": "renovação, então são clientes que entraram pra fazer V1 e clientes que vão"
+    },
+    {
+      "start": 97.76000213623047,
+      "end": 105.12000274658203,
+      "text": "fazer renovação. Eu fui aqui bem conservador e vamos supor que cada"
+    },
+    {
+      "start": 105.12000274658203,
+      "end": 109.80000305175781,
+      "text": "cliente desse aqui vai pagar uma média de 10 mil reais por mês pra que você"
+    },
+    {
+      "start": 109.87999725341797,
+      "end": 115.12000274658203,
+      "text": "possa executar projetos pra esses clientes. Fazendo esse exercício, pensa comigo o"
+    },
+    {
+      "start": 115.12000274658203,
+      "end": 120.4800033569336,
+      "text": "seguinte, o que nós temos à nossa disposição aqui ó, se você no primeiro mês, você vai lá,"
+    },
+    {
+      "start": 120.4800033569336,
+      "end": 125.55999755859375,
+      "text": "você consegue fechar um projeto aqui de 60 mil reais, tá vendo aqui ó, um projetinho"
+    },
+    {
+      "start": 125.55999755859375,
+      "end": 131.16000366210938,
+      "text": "de 60 mil reais, uma V1 ali, um MVPzinho de 60 conto e você divide esse"
+    },
+    {
+      "start": 131.16000366210938,
+      "end": 135.1999969482422,
+      "text": "projeto pelo tempo que ele vai ficar com você, então se é seis meses esse projeto"
+    },
+    {
+      "start": 135.1999969482422,
+      "end": 140.44000244140625,
+      "text": "eu vou cobrar 10 mil reais por mês. Primeiro mês, já no fechamento ali, você já vai"
+    },
+    {
+      "start": 140.44000244140625,
+      "end": 146.52000427246094,
+      "text": "ter 10k ali tranquilão, vai entrar no seu bolso, vai pagar em nota fiscal, vai"
+    },
+    {
+      "start": 146.52000427246094,
+      "end": 151.55999755859375,
+      "text": "sobrar um cascalinho pra você e aí você obviamente vai fazer toda a divisão de"
+    },
+    {
+      "start": 151.55999755859375,
+      "end": 156.9600067138672,
+      "text": "reserva, segurança, investimento, pagar custos, enfim, mas entrou 10 mil reais."
+    },
+    {
+      "start": 156.9600067138672,
+      "end": 161.39999389648438,
+      "text": "Digamos que no mês de fevereiro você fez algumas ações, conseguiu trazer mais"
+    },
+    {
+      "start": 161.39999389648438,
+      "end": 168.75999450683594,
+      "text": "dois clientes, se for na mesma média ali, você cobrar entre 60, 70, 80 mil um"
+    },
+    {
+      "start": 168.75999450683594,
+      "end": 175.63999938964844,
+      "text": "projeto, no segundo mês você já vai ter 30 mil reais entrando, então se tinha 10"
+    },
+    {
+      "start": 175.63999938964844,
+      "end": 180,
+      "text": "mil, aqui você já vai ter 30, porque um projeto está pagando recorrência e dois"
+    },
+    {
+      "start": 180,
+      "end": 186.32000732421875,
+      "text": "que acabaram de chegar pagando a primeira parcela. Você vai com 30 mil reais, mais ou"
+    },
+    {
+      "start": 186.32000732421875,
+      "end": 192.8000030517578,
+      "text": "menos aqui, até o final de maio, tá vendo aqui? Eu coloquei um novo cliente só em"
+    },
+    {
+      "start": 192.8000030517578,
+      "end": 198.36000061035156,
+      "text": "junho, só em junho, por quê? Porque aqui você já está finalizando a v1 de um"
+    },
+    {
+      "start": 198.36000061035156,
+      "end": 203.36000061035156,
+      "text": "cliente, você já está ali mais ou menos quase finalizando dois clientes aqui, então"
+    },
+    {
+      "start": 203.36000061035156,
+      "end": 206.83999633789062,
+      "text": "vai abrir uma janela para entrar um novo cliente aqui. Quando entra esse novo"
+    },
+    {
+      "start": 206.83999633789062,
+      "end": 211.8800048828125,
+      "text": "cliente, você ainda já tem três dentro da casa, então o que você ganhava 30, agora"
+    },
+    {
+      "start": 211.8800048828125,
+      "end": 217.63999938964844,
+      "text": "você vai ganhar 40. Se esse cliente aqui, que fechou lá no começo do ano, quiser"
+    },
+    {
+      "start": 217.63999938964844,
+      "end": 221.9600067138672,
+      "text": "renovar com você em julho, ele pode renovar por mais seis meses, continuando"
+    },
+    {
+      "start": 221.9600067138672,
+      "end": 225.9199981689453,
+      "text": "pagando 10 mil reais. Então, se ele vai continuar pagando, e"
+    },
+    {
+      "start": 225.9199981689453,
+      "end": 229.9600067138672,
+      "text": "geralmente na renovação, as novas implementações são menores, não toma"
+    },
+    {
+      "start": 229.9600067138672,
+      "end": 237.52000427246094,
+      "text": "tanto tempo, é mais tranquilo, então você vai ter agora 50 mil aqui. Em agosto, até"
+    },
+    {
+      "start": 237.52000427246094,
+      "end": 241.55999755859375,
+      "text": "dezembro, nós temos alguns projetos que estão finalizando, que podem também ter"
+    },
+    {
+      "start": 241.55999755859375,
+      "end": 248,
+      "text": "renovação, e eu posso pegar mais dois novos projetos aqui, porque eu vou estar"
+    },
+    {
+      "start": 248,
+      "end": 253.32000732421875,
+      "text": "finalizando mais dois aqui, eu posso ter mais dois, e aí você vai ter praticamente"
+    },
+    {
+      "start": 253.32000732421875,
+      "end": 258.3599853515625,
+      "text": "60 mil reais rodando em todos os meses. Isso é padrão? Isso acontece com todo"
+    },
+    {
+      "start": 258.3599853515625,
+      "end": 263.8800048828125,
+      "text": "mundo? É claro que não, galera, claro que não. Eu conheço desenvolvedores que estão"
+    },
+    {
+      "start": 263.8800048828125,
+      "end": 269.8399963378906,
+      "text": "aqui com seis clientes, já estão ganhando essa média aqui de 60 mil reais, de 50 a 60"
+    },
+    {
+      "start": 269.8399963378906,
+      "end": 274.1600036621094,
+      "text": "mil reais, e eles hoje não trabalham sozinhos, eles trabalham já com mais dois"
+    },
+    {
+      "start": 274.1600036621094,
+      "end": 279.20001220703125,
+      "text": "desenvolvedores, já trabalham com designer, eles já saíram de um papel de dev pra"
+    },
+    {
+      "start": 279.20001220703125,
+      "end": 284.79998779296875,
+      "text": "uma software house, mesmo eles não oficializando, eles já são uma software house, porque eles"
+    },
+    {
+      "start": 284.79998779296875,
+      "end": 288.9599914550781,
+      "text": "trabalham já em grupo, e eu vejo que eles conseguem tranquilamente lidar com seis,"
+    },
+    {
+      "start": 288.9599914550781,
+      "end": 295.5199890136719,
+      "text": "com sete, com oito, com dez projetos. O que faz isso daqui, né, essas crescentes"
+    },
+    {
+      "start": 295.5199890136719,
+      "end": 302.44000244140625,
+      "text": "aqui funcionar, é simplesmente o fato de você saber se organizar, conseguir determinar"
+    },
+    {
+      "start": 302.44000244140625,
+      "end": 307.20001220703125,
+      "text": "exatamente as etapas de trabalho de cada projeto, ser organizado, entregar tudo em"
+    },
+    {
+      "start": 307.20001220703125,
+      "end": 312.239990234375,
+      "text": "dia, ter uma comunicação assertiva com o cliente, ter realmente alinhamento de expectativas,"
+    },
+    {
+      "start": 312.239990234375,
+      "end": 319.239990234375,
+      "text": "que você consegue alcançar essas projeções. Projetos novos, projetos de renovação, onde"
+    },
+    {
+      "start": 319.239990234375,
+      "end": 324.1199951171875,
+      "text": "você consegue olhar pra recorrência, por isso que a recorrência, eu gosto da recorrência,"
+    },
+    {
+      "start": 324.1199951171875,
+      "end": 330.3999938964844,
+      "text": "a recorrência, ela vai fazer você ganhar todos os meses, todos os meses, eu gosto de"
+    },
+    {
+      "start": 330.3999938964844,
+      "end": 338.3999938964844,
+      "text": "olhar pra mensalidade, eu não gosto de oferecer um projeto é 50% agora e 50% na entrega, cara,"
+    },
+    {
+      "start": 338.3999938964844,
+      "end": 342.8399963378906,
+      "text": "eu simplesmente não gosto, não curto muito, eu gosto muito do conceito de ter realmente"
+    },
+    {
+      "start": 342.8399963378906,
+      "end": 348.6400146484375,
+      "text": "uma receita mensal acontecendo, entrando, eu trabalhando ali com os meus clientes, tá"
+    },
+    {
+      "start": 348.6400146484375,
+      "end": 353.55999755859375,
+      "text": "tudo bem, porque eu olho pra um gráfico mais ou menos como esse daqui. Primeiro mês, ah,"
+    },
+    {
+      "start": 353.55999755859375,
+      "end": 357.8399963378906,
+      "text": "eu tenho só um cliente. Segundo mês, talvez eu só tenha um cliente também, mas no terceiro"
+    },
+    {
+      "start": 357.8399963378906,
+      "end": 362.4800109863281,
+      "text": "mês eu posso fechar dois de uma vez, o que era 10 mil por mês, agora é 30. Lá no quinto,"
+    },
+    {
+      "start": 362.4800109863281,
+      "end": 366.55999755859375,
+      "text": "no sexto mês, eu vou fechar mais, agora é 40, agora é 50, eu já renovei a galera"
+    },
+    {
+      "start": 366.55999755859375,
+      "end": 370.8399963378906,
+      "text": "que tá lá atrás. Então quando você olha pra esse fluxo de receita recorrente, ele"
+    },
+    {
+      "start": 370.8399963378906,
+      "end": 374.7200012207031,
+      "text": "realmente brilha mais, ele realmente te dá essa visão de, caraca, por que que eu não"
+    },
+    {
+      "start": 374.7200012207031,
+      "end": 378.3999938964844,
+      "text": "pensei nisso, se eu fechar uma carteira de seis clientes aqui, vou correr pra fechar"
+    },
+    {
+      "start": 378.3999938964844,
+      "end": 381.760009765625,
+      "text": "uma carteira de seis clientes, cara, se eu tiver seis clientes e eu cobrar uma média"
+    },
+    {
+      "start": 381.760009765625,
+      "end": 388.32000732421875,
+      "text": "ali de 10 mil por mês, eu vou ter praticamente 60 mil reais entrando todos os meses na minha"
+    },
+    {
+      "start": 388.32000732421875,
+      "end": 392.239990234375,
+      "text": "conta. Então, vocês precisam trabalhar com estratégia, vocês precisam trabalhar com"
+    },
+    {
+      "start": 392.239990234375,
+      "end": 398.7200012207031,
+      "text": "inteligência, saber precificar e saber cobrar de forma inteligente e de forma estratégica"
+    },
+    {
+      "start": 398.7200012207031,
+      "end": 404.6400146484375,
+      "text": "pra que vocês todos os meses estejam recebendo. E aí, óbvio, isso agregado a um bom trabalho,"
+    },
+    {
+      "start": 404.6400146484375,
+      "end": 408.8399963378906,
+      "text": "uma boa entrega, uma boa gestão, uma boa qualidade. Existem, obviamente, outros fatores"
+    },
+    {
+      "start": 408.8399963378906,
+      "end": 413.6000061035156,
+      "text": "que você precisa ter pra conseguir manter isso daqui de uma maneira muito eficiente."
+    },
+    {
+      "start": 413.6000061035156,
+      "end": 418.6000061035156,
+      "text": "Organização, você precisa ter realmente um senso crítico, saber lidar com prazos,"
+    },
+    {
+      "start": 418.6000061035156,
+      "end": 423,
+      "text": "com tarefas, com atividades. Mas uma vez que vocês fazem esse exercício de entender,"
+    },
+    {
+      "start": 423,
+      "end": 428.0400085449219,
+      "text": "de olhar pro médio, longo prazo e recorrente, isso gera, querendo ou não, pra você um"
+    },
+    {
+      "start": 428.0400085449219,
+      "end": 434.55999755859375,
+      "text": "ganho muito satisfatório, que é parecido com o ganho que desenvolvedores têm aí trabalhando"
+    },
+    {
+      "start": 434.55999755859375,
+      "end": 439.55999755859375,
+      "text": "pra empresas do exterior. Vocês precisam, mais uma vez, trabalhar com inteligência,"
+    },
+    {
+      "start": 439.55999755859375,
+      "end": 443.6400146484375,
+      "text": "trabalhar com organização, saber os seus limites. Vai ter desenvolvedores que vão conseguir"
+    },
+    {
+      "start": 443.6400146484375,
+      "end": 447.44000244140625,
+      "text": "pegar só dois, três projetos simultâneos. Vai ter desenvolvedores que conseguem pegar"
+    },
+    {
+      "start": 447.44000244140625,
+      "end": 451.9200134277344,
+      "text": "quatro, cinco projetos simultâneos. Tudo depende da forma que você trabalha e se organiza"
+    },
+    {
+      "start": 451.9200134277344,
+      "end": 460.20001220703125,
+      "text": "pra trabalhar. Beleza? Na próxima aula, a gente vai falar um pouquinho sobre escalonamento,"
+    },
+    {
+      "start": 460.20001220703125,
+      "end": 464,
+      "text": "como você escalona a sua apreciação do serviço, casando um pouquinho com o que eu"
+    },
+    {
+      "start": 464,
+      "end": 469.8399963378906,
+      "text": "acabei de falar ali, de quantidade de clientes que você pode atender e etc, pra gente encerrar"
+    },
+    {
+      "start": 469.8399963378906,
+      "end": 475.7200012207031,
+      "text": "esse módulo de produtificação e entrar no próximo módulo, que é o módulo de marketing,"
+    },
+    {
+      "start": 475.7200012207031,
+      "end": 482.7200012207031,
+      "text": "que vai contribuir pra você conseguir fechar e vender projetos de software."
+    },
+    {
+      "start": 490.20001220703125,
+      "end": 493.20001220703125,
+      "text": "Legendas pela comunidade Amara.org"
+    }
+  ],
+  "fullText": "Fala comigo turma! Quando eu digo pra vocês foquem na receita recorrente, vocês acabam não entendendo muitos motivos. E pra ilustrar de uma forma até que bem simples aqui pra vocês, eu fiz um exercício de como que vocês podem olhar pro médio, pro longo prazo, olhar para o fluxo de receita recorrente, olhar para o fluxo de mensalidades, pra você entender mais ou menos o potencial de ganhos que você tem à sua disposição, mas que às vezes por você não ter isso muito visível, você acaba deixando passar aí algumas coisas. O que eu quero que vocês analisem desse gráfico aqui? Imagina que nós temos aqui a quantidade de clientes que eu posso atender em um ano, quantidade de clientes que eu posso atender em um ano. E eu peguei uma média aqui de seis meses pra cada projeto, pra cada cliente. Então imagina que de janeiro a junho eu vou ter um cliente, de fevereiro até maio eu vou estar com três clientes, então vou estar com esses três clientes, de junho até mais ou menos ali, até dezembro eu vou estar entre quatro e cinco clientes, então eu vou estar batendo basicamente seis clientes o ano inteiro. O que está verdinho aqui é V1, o que está em laranja ou marrom pra vocês aí é renovação, então são clientes que entraram pra fazer V1 e clientes que vão fazer renovação. Eu fui aqui bem conservador e vamos supor que cada cliente desse aqui vai pagar uma média de 10 mil reais por mês pra que você possa executar projetos pra esses clientes. Fazendo esse exercício, pensa comigo o seguinte, o que nós temos à nossa disposição aqui ó, se você no primeiro mês, você vai lá, você consegue fechar um projeto aqui de 60 mil reais, tá vendo aqui ó, um projetinho de 60 mil reais, uma V1 ali, um MVPzinho de 60 conto e você divide esse projeto pelo tempo que ele vai ficar com você, então se é seis meses esse projeto eu vou cobrar 10 mil reais por mês. Primeiro mês, já no fechamento ali, você já vai ter 10k ali tranquilão, vai entrar no seu bolso, vai pagar em nota fiscal, vai sobrar um cascalinho pra você e aí você obviamente vai fazer toda a divisão de reserva, segurança, investimento, pagar custos, enfim, mas entrou 10 mil reais. Digamos que no mês de fevereiro você fez algumas ações, conseguiu trazer mais dois clientes, se for na mesma média ali, você cobrar entre 60, 70, 80 mil um projeto, no segundo mês você já vai ter 30 mil reais entrando, então se tinha 10 mil, aqui você já vai ter 30, porque um projeto está pagando recorrência e dois que acabaram de chegar pagando a primeira parcela. Você vai com 30 mil reais, mais ou menos aqui, até o final de maio, tá vendo aqui? Eu coloquei um novo cliente só em junho, só em junho, por quê? Porque aqui você já está finalizando a v1 de um cliente, você já está ali mais ou menos quase finalizando dois clientes aqui, então vai abrir uma janela para entrar um novo cliente aqui. Quando entra esse novo cliente, você ainda já tem três dentro da casa, então o que você ganhava 30, agora você vai ganhar 40. Se esse cliente aqui, que fechou lá no começo do ano, quiser renovar com você em julho, ele pode renovar por mais seis meses, continuando pagando 10 mil reais. Então, se ele vai continuar pagando, e geralmente na renovação, as novas implementações são menores, não toma tanto tempo, é mais tranquilo, então você vai ter agora 50 mil aqui. Em agosto, até dezembro, nós temos alguns projetos que estão finalizando, que podem também ter renovação, e eu posso pegar mais dois novos projetos aqui, porque eu vou estar finalizando mais dois aqui, eu posso ter mais dois, e aí você vai ter praticamente 60 mil reais rodando em todos os meses. Isso é padrão? Isso acontece com todo mundo? É claro que não, galera, claro que não. Eu conheço desenvolvedores que estão aqui com seis clientes, já estão ganhando essa média aqui de 60 mil reais, de 50 a 60 mil reais, e eles hoje não trabalham sozinhos, eles trabalham já com mais dois desenvolvedores, já trabalham com designer, eles já saíram de um papel de dev pra uma software house, mesmo eles não oficializando, eles já são uma software house, porque eles trabalham já em grupo, e eu vejo que eles conseguem tranquilamente lidar com seis, com sete, com oito, com dez projetos. O que faz isso daqui, né, essas crescentes aqui funcionar, é simplesmente o fato de você saber se organizar, conseguir determinar exatamente as etapas de trabalho de cada projeto, ser organizado, entregar tudo em dia, ter uma comunicação assertiva com o cliente, ter realmente alinhamento de expectativas, que você consegue alcançar essas projeções. Projetos novos, projetos de renovação, onde você consegue olhar pra recorrência, por isso que a recorrência, eu gosto da recorrência, a recorrência, ela vai fazer você ganhar todos os meses, todos os meses, eu gosto de olhar pra mensalidade, eu não gosto de oferecer um projeto é 50% agora e 50% na entrega, cara, eu simplesmente não gosto, não curto muito, eu gosto muito do conceito de ter realmente uma receita mensal acontecendo, entrando, eu trabalhando ali com os meus clientes, tá tudo bem, porque eu olho pra um gráfico mais ou menos como esse daqui. Primeiro mês, ah, eu tenho só um cliente. Segundo mês, talvez eu só tenha um cliente também, mas no terceiro mês eu posso fechar dois de uma vez, o que era 10 mil por mês, agora é 30. Lá no quinto, no sexto mês, eu vou fechar mais, agora é 40, agora é 50, eu já renovei a galera que tá lá atrás. Então quando você olha pra esse fluxo de receita recorrente, ele realmente brilha mais, ele realmente te dá essa visão de, caraca, por que que eu não pensei nisso, se eu fechar uma carteira de seis clientes aqui, vou correr pra fechar uma carteira de seis clientes, cara, se eu tiver seis clientes e eu cobrar uma média ali de 10 mil por mês, eu vou ter praticamente 60 mil reais entrando todos os meses na minha conta. Então, vocês precisam trabalhar com estratégia, vocês precisam trabalhar com inteligência, saber precificar e saber cobrar de forma inteligente e de forma estratégica pra que vocês todos os meses estejam recebendo. E aí, óbvio, isso agregado a um bom trabalho, uma boa entrega, uma boa gestão, uma boa qualidade. Existem, obviamente, outros fatores que você precisa ter pra conseguir manter isso daqui de uma maneira muito eficiente. Organização, você precisa ter realmente um senso crítico, saber lidar com prazos, com tarefas, com atividades. Mas uma vez que vocês fazem esse exercício de entender, de olhar pro médio, longo prazo e recorrente, isso gera, querendo ou não, pra você um ganho muito satisfatório, que é parecido com o ganho que desenvolvedores têm aí trabalhando pra empresas do exterior. Vocês precisam, mais uma vez, trabalhar com inteligência, trabalhar com organização, saber os seus limites. Vai ter desenvolvedores que vão conseguir pegar só dois, três projetos simultâneos. Vai ter desenvolvedores que conseguem pegar quatro, cinco projetos simultâneos. Tudo depende da forma que você trabalha e se organiza pra trabalhar. Beleza? Na próxima aula, a gente vai falar um pouquinho sobre escalonamento, como você escalona a sua apreciação do serviço, casando um pouquinho com o que eu acabei de falar ali, de quantidade de clientes que você pode atender e etc, pra gente encerrar esse módulo de produtificação e entrar no próximo módulo, que é o módulo de marketing, que vai contribuir pra você conseguir fechar e vender projetos de software. Legendas pela comunidade Amara.org"
+}

@@ -1,0 +1,550 @@
+{
+  "lessonId": "87854a58-91a5-4335-bd48-efff30e88645",
+  "lessonNumber": 1,
+  "title": "Introducao",
+  "language": "portuguese",
+  "durationSec": 530,
+  "segments": [
+    {
+      "start": 0,
+      "end": 4.300000190734863,
+      "text": "Fala comigo turma! Sejam bem-vindos a mais um módulo aqui do Método Venda Mais"
+    },
+    {
+      "start": 4.300000190734863,
+      "end": 9.119999885559082,
+      "text": "Aplicativo e esse módulo é o de produtificação. Como expliquei para"
+    },
+    {
+      "start": 9.119999885559082,
+      "end": 13.760000228881836,
+      "text": "vocês no último módulo de planejamento estruturado de aplicativo, a partir de"
+    },
+    {
+      "start": 13.760000228881836,
+      "end": 18.600000381469727,
+      "text": "agora a gente vai se aprofundar um pouco mais no mundo do marketing e das vendas."
+    },
+    {
+      "start": 18.600000381469727,
+      "end": 22.760000228881836,
+      "text": "E para a gente começar com o pé direito a gente precisa falar sobre"
+    },
+    {
+      "start": 22.760000228881836,
+      "end": 28.8799991607666,
+      "text": "produtificação. Como e por que transformar a sua prestação de serviço"
+    },
+    {
+      "start": 28.8799991607666,
+      "end": 35,
+      "text": "em um produto? Depois de três anos trabalhando e vendendo software, vendendo"
+    },
+    {
+      "start": 35,
+      "end": 39.720001220703125,
+      "text": "projetos de desenvolvimento no mercado, eu comecei a perceber que dentro da"
+    },
+    {
+      "start": 39.720001220703125,
+      "end": 43.63999938964844,
+      "text": "prestação de serviço, do nosso mercado de desenvolvimento, a"
+    },
+    {
+      "start": 43.63999938964844,
+      "end": 50.79999923706055,
+      "text": "produtificação ela também gera muitos benefícios quando bem aplicada."
+    },
+    {
+      "start": 50.79999923706055,
+      "end": 55.63999938964844,
+      "text": "Imagina comigo o seguinte, imagina que você é um desenvolvedor hoje e você está se"
+    },
+    {
+      "start": 55.63999938964844,
+      "end": 60.400001525878906,
+      "text": "comunicando com absolutamente todo mundo, absolutamente qualquer público,"
+    },
+    {
+      "start": 60.400001525878906,
+      "end": 65.91999816894531,
+      "text": "qualquer perfil, qualquer nicho. Você tem uma comunicação muito genérica, você vai"
+    },
+    {
+      "start": 65.91999816894531,
+      "end": 71.4800033569336,
+      "text": "ter um esforço muito grande para conseguir se comunicar com um monte de"
+    },
+    {
+      "start": 71.4800033569336,
+      "end": 76.55999755859375,
+      "text": "perfil ao mesmo tempo, com um monte de público ao mesmo tempo. E é nesse ponto"
+    },
+    {
+      "start": 76.55999755859375,
+      "end": 82.91999816894531,
+      "text": "que entra o processo de produtificação. Como que você empacota a sua prestação"
+    },
+    {
+      "start": 82.91999816894531,
+      "end": 89.4000015258789,
+      "text": "de serviço em um formato de produto da qual você consegue se comunicar muito"
+    },
+    {
+      "start": 89.4000015258789,
+      "end": 95.83999633789062,
+      "text": "efetivamente com o perfil de público, perfil de cliente ideal que você quer"
+    },
+    {
+      "start": 95.83999633789062,
+      "end": 101.12000274658203,
+      "text": "atingir. Então nesse módulo você vai aprender um pouquinho esse processo de"
+    },
+    {
+      "start": 101.12000274658203,
+      "end": 105.80000305175781,
+      "text": "produtificação e nessa aula que especificamente a gente vai fazer uma"
+    },
+    {
+      "start": 105.80000305175781,
+      "end": 110.23999786376953,
+      "text": "introdução à produtificação. Vou compartilhar minha telinha com vocês e"
+    },
+    {
+      "start": 110.23999786376953,
+      "end": 115.12000274658203,
+      "text": "vamos começar a nossa jornada por esse universo, por esse mundo da"
+    },
+    {
+      "start": 115.12000274658203,
+      "end": 120.83999633789062,
+      "text": "produtificação. Primeiro de tudo, dentro da produtificação, você transformar sua"
+    },
+    {
+      "start": 120.83999633789062,
+      "end": 127.04000091552734,
+      "text": "prestação de serviços em um produto, nós precisamos entender pra quem a gente"
+    },
+    {
+      "start": 127.04000091552734,
+      "end": 130.36000061035156,
+      "text": "vai vender. Nós precisamos entender qual que é o"
+    },
+    {
+      "start": 130.36000061035156,
+      "end": 136.0399932861328,
+      "text": "perfil de público ideal, perfil de cliente ideal. Porque a produtificação"
+    },
+    {
+      "start": 136.0399932861328,
+      "end": 141.83999633789062,
+      "text": "ela trata única e exclusivamente em você poder oferecer soluções personalizadas"
+    },
+    {
+      "start": 141.83999633789062,
+      "end": 147.24000549316406,
+      "text": "para um público específico e esse público ele tem desejos, esse público ele"
+    },
+    {
+      "start": 147.24000549316406,
+      "end": 151.39999389648438,
+      "text": "tem problemas que precisam ser solucionados. É basicamente um processo"
+    },
+    {
+      "start": 151.39999389648438,
+      "end": 159.32000732421875,
+      "text": "de você subnichar, de você subnichar a sua atuação como um prestador de"
+    },
+    {
+      "start": 159.32000732421875,
+      "end": 162.0800018310547,
+      "text": "serviço. Ao invés de você se comunicar com uma"
+    },
+    {
+      "start": 162.0800018310547,
+      "end": 167.47999572753906,
+      "text": "empresa, com startups, com infoprodutores, você se comunicar com pessoas físicas,"
+    },
+    {
+      "start": 167.47999572753906,
+      "end": 172.60000610351562,
+      "text": "com comerciantes, com MEIs. Ao invés de você tentar se comunicar com todo mundo ao mesmo"
+    },
+    {
+      "start": 172.60000610351562,
+      "end": 177.1999969482422,
+      "text": "tempo, você vai se comunicar com um público específico oferecendo uma"
+    },
+    {
+      "start": 177.1999969482422,
+      "end": 183.55999755859375,
+      "text": "solução específica para esse público. Quanto mais nichado, quanto mais segmentado"
+    },
+    {
+      "start": 183.55999755859375,
+      "end": 190.16000366210938,
+      "text": "for sua atuação, melhor vai ser os seus resultados. Tudo começa com a definição"
+    },
+    {
+      "start": 190.16000366210938,
+      "end": 196.67999267578125,
+      "text": "do seu perfil de público ideal, o famoso ICP, que é o seu perfil de cliente"
+    },
+    {
+      "start": 196.67999267578125,
+      "end": 201.9600067138672,
+      "text": "ideal. E para você conseguir definir o perfil de público ideal, você precisa"
+    },
+    {
+      "start": 201.9600067138672,
+      "end": 206.72000122070312,
+      "text": "ter uma segmentação de qualidade. É preciso segmentar muito bem esse público,"
+    },
+    {
+      "start": 206.72000122070312,
+      "end": 211.0800018310547,
+      "text": "entender o que esse público está buscando, onde esse público está, o que"
+    },
+    {
+      "start": 211.0800018310547,
+      "end": 215.44000244140625,
+      "text": "ele gosta de consumir, o que ele está procurando como soluções para o"
+    },
+    {
+      "start": 215.44000244140625,
+      "end": 220.0399932861328,
+      "text": "mercado, o que está pesquisando, o que ele está realmente consumindo de"
+    },
+    {
+      "start": 220.0399932861328,
+      "end": 224.72000122070312,
+      "text": "conteúdo do mercado, para você conseguir segmentar o mais rápido"
+    },
+    {
+      "start": 224.72000122070312,
+      "end": 229.24000549316406,
+      "text": "possível e o melhor possível esse público ideal. Ao mesmo tempo que você"
+    },
+    {
+      "start": 229.24000549316406,
+      "end": 233.67999267578125,
+      "text": "precisa entender qual que é o canal de ativação desse público. Vai ter público"
+    },
+    {
+      "start": 233.67999267578125,
+      "end": 236.9600067138672,
+      "text": "que você vai ter ali o canal de ativação ali dentro do Instagram."
+    },
+    {
+      "start": 236.9600067138672,
+      "end": 241.0399932861328,
+      "text": "Vou dar um exemplo, a gente fala muito com o infoprodutor, tem muitas campanhas"
+    },
+    {
+      "start": 241.0399932861328,
+      "end": 245.1999969482422,
+      "text": "para infoprodutores e a gente encontra muitos infoprodutores dentro do"
+    },
+    {
+      "start": 245.1999969482422,
+      "end": 249.32000732421875,
+      "text": "Instagram. Mas você vai ter provavelmente um perfil de público que vai estar"
+    },
+    {
+      "start": 249.32000732421875,
+      "end": 253.60000610351562,
+      "text": "dentro do LinkedIn, dentro do Google e assim por diante."
+    },
+    {
+      "start": 253.60000610351562,
+      "end": 257.67999267578125,
+      "text": "Então entender qual que é o canal de ativação é muito importante para que"
+    },
+    {
+      "start": 257.67999267578125,
+      "end": 262.6400146484375,
+      "text": "você saiba exatamente qual é o canal que você vai aplicar mais tempo, aplicar"
+    },
+    {
+      "start": 262.6400146484375,
+      "end": 267.4800109863281,
+      "text": "mais esforço para conseguir atrair esse perfil de clientes, esse perfil de"
+    },
+    {
+      "start": 267.4800109863281,
+      "end": 271.6400146484375,
+      "text": "público ideal. Ao mesmo tempo que você vai precisar ter algumas ações para"
+    },
+    {
+      "start": 271.6400146484375,
+      "end": 276.79998779296875,
+      "text": "aumentar a taxa de conversão desse potencial cliente, desse público"
+    },
+    {
+      "start": 276.79998779296875,
+      "end": 281.5199890136719,
+      "text": "específico e aumentar a taxa de conversão está muito ligado ao processo"
+    },
+    {
+      "start": 281.5199890136719,
+      "end": 285.1199951171875,
+      "text": "de dualidade que a gente vai ver na sequência e consequentemente quando você"
+    },
+    {
+      "start": 285.1199951171875,
+      "end": 290.8399963378906,
+      "text": "mapeia tudo isso você já consegue oferecer para ele produtos, soluções"
+    },
+    {
+      "start": 290.8399963378906,
+      "end": 296.9599914550781,
+      "text": "personalizadas sob medida para atender especificamente esse público, esse"
+    },
+    {
+      "start": 296.9599914550781,
+      "end": 299.9599914550781,
+      "text": "perfil de cliente. Para que isso seja possível dentro da"
+    },
+    {
+      "start": 299.9599914550781,
+      "end": 304.6000061035156,
+      "text": "produtificação, você vai aprender aqui com a gente nesse módulo um pouco do"
+    },
+    {
+      "start": 304.6400146484375,
+      "end": 311.1600036621094,
+      "text": "processo de dualidade, que para mim eu posso dizer que é o elemento principal, o"
+    },
+    {
+      "start": 311.1600036621094,
+      "end": 315.760009765625,
+      "text": "elemento fundamental que me ajudou a entender todos os processos, os"
+    },
+    {
+      "start": 315.760009765625,
+      "end": 321.0799865722656,
+      "text": "argumentos de comunicação que eu teria com esses clientes que pagam bem, que"
+    },
+    {
+      "start": 321.0799865722656,
+      "end": 326.239990234375,
+      "text": "pagam 50, 70, 80, 100, 200, meio milhão em um projeto de desenvolvimento. O que me"
+    },
+    {
+      "start": 326.239990234375,
+      "end": 331.20001220703125,
+      "text": "ajudou a me comunicar, a criar repertório, a ter realmente essa facilidade em vender"
+    },
+    {
+      "start": 331.20001220703125,
+      "end": 335.4800109863281,
+      "text": "software foi o processo de dualidade. Você vai aprender um pouquinho sobre o"
+    },
+    {
+      "start": 335.4800109863281,
+      "end": 340.79998779296875,
+      "text": "que é dualidade, dominar esse processo para você conseguir se comunicar com o"
+    },
+    {
+      "start": 340.79998779296875,
+      "end": 346.1600036621094,
+      "text": "teu potencial cliente e dentro dessa comunicação você vai conseguir pensar"
+    },
+    {
+      "start": 346.1600036621094,
+      "end": 352.1600036621094,
+      "text": "nas soluções para entregar para esse potencial cliente, esse perfil de"
+    },
+    {
+      "start": 352.1600036621094,
+      "end": 357.2799987792969,
+      "text": "cliente ideal. Essa solução vai estar empacotada em um fluxo de produto e esse"
+    },
+    {
+      "start": 357.2799987792969,
+      "end": 361.5199890136719,
+      "text": "produto vai ser muito bem mapeado em cima das dores, em cima dos desejos que"
+    },
+    {
+      "start": 361.5199890136719,
+      "end": 364.9599914550781,
+      "text": "esse perfil de público tem. Enquanto você vai empacotando esse"
+    },
+    {
+      "start": 364.9599914550781,
+      "end": 368.9599914550781,
+      "text": "produto, você já vai pensando como que vai ser a sua esteira de produção, para"
+    },
+    {
+      "start": 368.9599914550781,
+      "end": 373.55999755859375,
+      "text": "que você possa atender o máximo de clientes possível dentro da sua esteira,"
+    },
+    {
+      "start": 373.55999755859375,
+      "end": 377.67999267578125,
+      "text": "dentro da sua janela, fazendo esse processo de produtificação, deixando"
+    },
+    {
+      "start": 377.67999267578125,
+      "end": 382.1600036621094,
+      "text": "esse produto preparado. Você já vai ter uma precificação assertiva dessa"
+    },
+    {
+      "start": 382.1600036621094,
+      "end": 385.67999267578125,
+      "text": "solução que você está oferecendo para o seu perfil de cliente ideal e ao mesmo"
+    },
+    {
+      "start": 385.79998779296875,
+      "end": 390.20001220703125,
+      "text": "tempo você vai ter as estratégias de marketing para poder criar aí as"
+    },
+    {
+      "start": 390.20001220703125,
+      "end": 394.8800048828125,
+      "text": "campanhas, criar toda a comunicação, toda a sua estrutura de aquisição de novos"
+    },
+    {
+      "start": 394.8800048828125,
+      "end": 400,
+      "text": "clientes. Todo esse processo que a gente está falando aqui de dualidade, de você"
+    },
+    {
+      "start": 400,
+      "end": 404.2799987792969,
+      "text": "definir comunicação, pensar a solução, pensar a esteira, fazer todo esse processo"
+    },
+    {
+      "start": 404.2799987792969,
+      "end": 408.6000061035156,
+      "text": "de produtificação, criar estratégias de marketing, é simplesmente para você"
+    },
+    {
+      "start": 408.6000061035156,
+      "end": 414.760009765625,
+      "text": "atingir o seu perfil de cliente ideal sabendo exatamente como se"
+    },
+    {
+      "start": 414.760009765625,
+      "end": 420.5199890136719,
+      "text": "comunicar com ele. É muito importante que você entenda que esse processo de"
+    },
+    {
+      "start": 420.5199890136719,
+      "end": 425.2799987792969,
+      "text": "produtificação aqui, ele é um processo que uma vez que você faz, uma vez que"
+    },
+    {
+      "start": 425.2799987792969,
+      "end": 430,
+      "text": "você acerta na comunicação, acerta na estrutura de captação, acerta na"
+    },
+    {
+      "start": 430,
+      "end": 437.3999938964844,
+      "text": "estratégia, uma vez esse processo esteja ativo, ele vai ser um gerador infinito de"
+    },
+    {
+      "start": 437.3999938964844,
+      "end": 442.7200012207031,
+      "text": "potenciais clientes. Vou repetir, um gerador infinito de"
+    },
+    {
+      "start": 442.7200012207031,
+      "end": 446.8399963378906,
+      "text": "potenciais clientes, porque só nesse processo você vai estar utilizando todos"
+    },
+    {
+      "start": 446.8399963378906,
+      "end": 451.1600036621094,
+      "text": "os elementos que são essenciais para você fazer marketing e ao mesmo tempo"
+    },
+    {
+      "start": 451.1600036621094,
+      "end": 457.44000244140625,
+      "text": "vender um produto que é altamente irresistível, uma oferta altamente"
+    },
+    {
+      "start": 457.44000244140625,
+      "end": 460.8800048828125,
+      "text": "irresistível. Nas próximas aulas a gente vai começar a se aprofundar em cada"
+    },
+    {
+      "start": 460.8800048828125,
+      "end": 465.0799865722656,
+      "text": "etapa dessa daqui. A gente vai mapear o perfil de público ideal entendendo um"
+    },
+    {
+      "start": 465.0799865722656,
+      "end": 469.67999267578125,
+      "text": "conceito de dualidade, depois a gente vai mapear a comunicação, mapear a esteira de"
+    },
+    {
+      "start": 469.67999267578125,
+      "end": 472.2799987792969,
+      "text": "produção. A gente vai passar por cada etapa aqui da"
+    },
+    {
+      "start": 472.2799987792969,
+      "end": 477.760009765625,
+      "text": "produtificação para que você domine esse conceito aqui, e dominando esse conceito"
+    },
+    {
+      "start": 477.760009765625,
+      "end": 482.0799865722656,
+      "text": "você aplique dentro da sua operação, você aplique no seu dia a dia e"
+    },
+    {
+      "start": 482.0799865722656,
+      "end": 487.5199890136719,
+      "text": "consequentemente você consiga colher os resultados desse processo, dessa"
+    },
+    {
+      "start": 487.5199890136719,
+      "end": 491.760009765625,
+      "text": "estruturação que vai fazer você vender muito mais se você é apenas só vender"
+    },
+    {
+      "start": 491.760009765625,
+      "end": 495.7200012207031,
+      "text": "desenvolvimento personalizado querendo pegar todo tipo de público possível."
+    },
+    {
+      "start": 495.7200012207031,
+      "end": 499.239990234375,
+      "text": "Aqui a gente vai segmentar, aqui a gente vai subnichar a sua apreciação do"
+    },
+    {
+      "start": 499.239990234375,
+      "end": 503.9200134277344,
+      "text": "serviço. Eu vou dar bastante sugestões para que você analise, olhe e veja o que"
+    },
+    {
+      "start": 503.9200134277344,
+      "end": 507.7200012207031,
+      "text": "faz mais sentido. Consequentemente você vim até a"
+    },
+    {
+      "start": 507.7200012207031,
+      "end": 511.7200012207031,
+      "text": "comunidade participar das mentorias e a gente ir te direcionando cada vez mais"
+    },
+    {
+      "start": 511.7200012207031,
+      "end": 516,
+      "text": "nesse processo de produtificação, de segmentação de público, de atingir um"
+    },
+    {
+      "start": 516,
+      "end": 520.3200073242188,
+      "text": "perfil de público ideal para você poder prestar serviços, vender projetos de"
+    },
+    {
+      "start": 520.3200073242188,
+      "end": 523.239990234375,
+      "text": "desenvolvimento."
+    }
+  ],
+  "fullText": "Fala comigo turma! Sejam bem-vindos a mais um módulo aqui do Método Venda Mais Aplicativo e esse módulo é o de produtificação. Como expliquei para vocês no último módulo de planejamento estruturado de aplicativo, a partir de agora a gente vai se aprofundar um pouco mais no mundo do marketing e das vendas. E para a gente começar com o pé direito a gente precisa falar sobre produtificação. Como e por que transformar a sua prestação de serviço em um produto? Depois de três anos trabalhando e vendendo software, vendendo projetos de desenvolvimento no mercado, eu comecei a perceber que dentro da prestação de serviço, do nosso mercado de desenvolvimento, a produtificação ela também gera muitos benefícios quando bem aplicada. Imagina comigo o seguinte, imagina que você é um desenvolvedor hoje e você está se comunicando com absolutamente todo mundo, absolutamente qualquer público, qualquer perfil, qualquer nicho. Você tem uma comunicação muito genérica, você vai ter um esforço muito grande para conseguir se comunicar com um monte de perfil ao mesmo tempo, com um monte de público ao mesmo tempo. E é nesse ponto que entra o processo de produtificação. Como que você empacota a sua prestação de serviço em um formato de produto da qual você consegue se comunicar muito efetivamente com o perfil de público, perfil de cliente ideal que você quer atingir. Então nesse módulo você vai aprender um pouquinho esse processo de produtificação e nessa aula que especificamente a gente vai fazer uma introdução à produtificação. Vou compartilhar minha telinha com vocês e vamos começar a nossa jornada por esse universo, por esse mundo da produtificação. Primeiro de tudo, dentro da produtificação, você transformar sua prestação de serviços em um produto, nós precisamos entender pra quem a gente vai vender. Nós precisamos entender qual que é o perfil de público ideal, perfil de cliente ideal. Porque a produtificação ela trata única e exclusivamente em você poder oferecer soluções personalizadas para um público específico e esse público ele tem desejos, esse público ele tem problemas que precisam ser solucionados. É basicamente um processo de você subnichar, de você subnichar a sua atuação como um prestador de serviço. Ao invés de você se comunicar com uma empresa, com startups, com infoprodutores, você se comunicar com pessoas físicas, com comerciantes, com MEIs. Ao invés de você tentar se comunicar com todo mundo ao mesmo tempo, você vai se comunicar com um público específico oferecendo uma solução específica para esse público. Quanto mais nichado, quanto mais segmentado for sua atuação, melhor vai ser os seus resultados. Tudo começa com a definição do seu perfil de público ideal, o famoso ICP, que é o seu perfil de cliente ideal. E para você conseguir definir o perfil de público ideal, você precisa ter uma segmentação de qualidade. É preciso segmentar muito bem esse público, entender o que esse público está buscando, onde esse público está, o que ele gosta de consumir, o que ele está procurando como soluções para o mercado, o que está pesquisando, o que ele está realmente consumindo de conteúdo do mercado, para você conseguir segmentar o mais rápido possível e o melhor possível esse público ideal. Ao mesmo tempo que você precisa entender qual que é o canal de ativação desse público. Vai ter público que você vai ter ali o canal de ativação ali dentro do Instagram. Vou dar um exemplo, a gente fala muito com o infoprodutor, tem muitas campanhas para infoprodutores e a gente encontra muitos infoprodutores dentro do Instagram. Mas você vai ter provavelmente um perfil de público que vai estar dentro do LinkedIn, dentro do Google e assim por diante. Então entender qual que é o canal de ativação é muito importante para que você saiba exatamente qual é o canal que você vai aplicar mais tempo, aplicar mais esforço para conseguir atrair esse perfil de clientes, esse perfil de público ideal. Ao mesmo tempo que você vai precisar ter algumas ações para aumentar a taxa de conversão desse potencial cliente, desse público específico e aumentar a taxa de conversão está muito ligado ao processo de dualidade que a gente vai ver na sequência e consequentemente quando você mapeia tudo isso você já consegue oferecer para ele produtos, soluções personalizadas sob medida para atender especificamente esse público, esse perfil de cliente. Para que isso seja possível dentro da produtificação, você vai aprender aqui com a gente nesse módulo um pouco do processo de dualidade, que para mim eu posso dizer que é o elemento principal, o elemento fundamental que me ajudou a entender todos os processos, os argumentos de comunicação que eu teria com esses clientes que pagam bem, que pagam 50, 70, 80, 100, 200, meio milhão em um projeto de desenvolvimento. O que me ajudou a me comunicar, a criar repertório, a ter realmente essa facilidade em vender software foi o processo de dualidade. Você vai aprender um pouquinho sobre o que é dualidade, dominar esse processo para você conseguir se comunicar com o teu potencial cliente e dentro dessa comunicação você vai conseguir pensar nas soluções para entregar para esse potencial cliente, esse perfil de cliente ideal. Essa solução vai estar empacotada em um fluxo de produto e esse produto vai ser muito bem mapeado em cima das dores, em cima dos desejos que esse perfil de público tem. Enquanto você vai empacotando esse produto, você já vai pensando como que vai ser a sua esteira de produção, para que você possa atender o máximo de clientes possível dentro da sua esteira, dentro da sua janela, fazendo esse processo de produtificação, deixando esse produto preparado. Você já vai ter uma precificação assertiva dessa solução que você está oferecendo para o seu perfil de cliente ideal e ao mesmo tempo você vai ter as estratégias de marketing para poder criar aí as campanhas, criar toda a comunicação, toda a sua estrutura de aquisição de novos clientes. Todo esse processo que a gente está falando aqui de dualidade, de você definir comunicação, pensar a solução, pensar a esteira, fazer todo esse processo de produtificação, criar estratégias de marketing, é simplesmente para você atingir o seu perfil de cliente ideal sabendo exatamente como se comunicar com ele. É muito importante que você entenda que esse processo de produtificação aqui, ele é um processo que uma vez que você faz, uma vez que você acerta na comunicação, acerta na estrutura de captação, acerta na estratégia, uma vez esse processo esteja ativo, ele vai ser um gerador infinito de potenciais clientes. Vou repetir, um gerador infinito de potenciais clientes, porque só nesse processo você vai estar utilizando todos os elementos que são essenciais para você fazer marketing e ao mesmo tempo vender um produto que é altamente irresistível, uma oferta altamente irresistível. Nas próximas aulas a gente vai começar a se aprofundar em cada etapa dessa daqui. A gente vai mapear o perfil de público ideal entendendo um conceito de dualidade, depois a gente vai mapear a comunicação, mapear a esteira de produção. A gente vai passar por cada etapa aqui da produtificação para que você domine esse conceito aqui, e dominando esse conceito você aplique dentro da sua operação, você aplique no seu dia a dia e consequentemente você consiga colher os resultados desse processo, dessa estruturação que vai fazer você vender muito mais se você é apenas só vender desenvolvimento personalizado querendo pegar todo tipo de público possível. Aqui a gente vai segmentar, aqui a gente vai subnichar a sua apreciação do serviço. Eu vou dar bastante sugestões para que você analise, olhe e veja o que faz mais sentido. Consequentemente você vim até a comunidade participar das mentorias e a gente ir te direcionando cada vez mais nesse processo de produtificação, de segmentação de público, de atingir um perfil de público ideal para você poder prestar serviços, vender projetos de desenvolvimento."
+}

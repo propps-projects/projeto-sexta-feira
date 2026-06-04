@@ -1,0 +1,38 @@
+# /etc/nginx/sites-available/agentclass.conf
+# Reverse proxy with HTTPS in front of the MCP HTTP server.
+# Claude.ai requires HTTPS for Custom Connectors.
+#
+# Prereqs:
+#   1) DNS A record pointing your domain to the VPS IP.
+#   2) certbot + nginx plugin: `sudo apt install certbot python3-certbot-nginx`
+#   3) `sudo certbot --nginx -d agentclass.yourdomain.com` — this auto-edits
+#      this file to insert the listen 443 ssl block and certs.
+
+server {
+    listen 80;
+    server_name agentclass.yourdomain.com;
+
+    # Increase body size — play_lesson responses can be 600KB+ (hls.js inline).
+    client_max_body_size 4m;
+
+    location /health {
+        proxy_pass http://127.0.0.1:3333;
+        proxy_http_version 1.1;
+    }
+
+    location /mcp {
+        proxy_pass http://127.0.0.1:3333;
+        proxy_http_version 1.1;
+        # Streaming HTTP / SSE — disable buffering and extend timeouts.
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # Forward the Mcp-Session-Id header both ways.
+        proxy_pass_request_headers on;
+        proxy_read_timeout 600s;
+        proxy_send_timeout 600s;
+    }
+}

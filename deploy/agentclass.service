@@ -1,0 +1,27 @@
+[Unit]
+Description=agentclass MCP HTTP server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Adjust to wherever you cloned the repo on the VPS
+WorkingDirectory=/opt/mcp-agentclass
+# Use the absolute path to node + tsx; `which node` on the VPS to confirm.
+# If you installed via `npm i -g tsx`, the bin sits next to node.
+ExecStart=/usr/bin/env npx tsx src/server-http.ts
+EnvironmentFile=/opt/mcp-agentclass/.env
+Restart=on-failure
+RestartSec=3
+# Same user/group you cloned the repo under; root is NOT recommended.
+User=mcp
+Group=mcp
+# Hardening — drop privileges and limit FS access.
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/mcp-agentclass/data
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,490 @@
+{
+  "lessonId": "1329ad56-6bd0-4829-a2bc-12fbd6bd3634",
+  "lessonNumber": 2,
+  "title": "ICP e Dualidade",
+  "language": "portuguese",
+  "durationSec": 606,
+  "segments": [
+    {
+      "start": 0,
+      "end": 7,
+      "text": "Fala comigo turma, vamos tentar identificar aqui o nosso ICP, hipotético para você entender"
+    },
+    {
+      "start": 7,
+      "end": 12.15999984741211,
+      "text": "um pouquinho como que a gente mapeia um perfil de público ideal, um perfil de cliente ideal"
+    },
+    {
+      "start": 12.15999984741211,
+      "end": 19.399999618530273,
+      "text": "e também dominar aí os conceitos de dualidade. Quando a gente fala sobre ICP, perfil de cliente"
+    },
+    {
+      "start": 19.399999618530273,
+      "end": 27.1200008392334,
+      "text": "ideal, perfil de público ideal, a gente tem inúmeras possibilidades a nossa disposição."
+    },
+    {
+      "start": 27.1200008392334,
+      "end": 33.599998474121094,
+      "text": "Então a gente pode ter MEIs, empreendedores, empresas, startups, a gente pode nichar por segmento,"
+    },
+    {
+      "start": 33.599998474121094,
+      "end": 40.63999938964844,
+      "text": "então a gente tem empreendedores, empresários, empresas na saúde, pet, a gente pode ter games,"
+    },
+    {
+      "start": 40.63999938964844,
+      "end": 46.08000183105469,
+      "text": "a gente pode ter pesca, a gente vai ter vários nichos, vários segmentos e você vai precisar olhar"
+    },
+    {
+      "start": 46.08000183105469,
+      "end": 52.20000076293945,
+      "text": "para esses nichos, olhar para esses segmentos, olhar para esses potenciais perfis que você desejaria"
+    },
+    {
+      "start": 52.20000076293945,
+      "end": 57.720001220703125,
+      "text": "trabalhar, desejaria vender alguma solução para você conseguir ter realmente uma segmentação de"
+    },
+    {
+      "start": 57.720001220703125,
+      "end": 62.91999816894531,
+      "text": "qualidade, oferecer algo sob medida para essa galera entender qual é o canal de ativação e"
+    },
+    {
+      "start": 62.91999816894531,
+      "end": 68.76000213623047,
+      "text": "ter as ações para aumentar a taxa de conversão. Eu gosto sempre de fazer um bom exercício para"
+    },
+    {
+      "start": 68.76000213623047,
+      "end": 75.44000244140625,
+      "text": "identificar o ICP, identificar o teu perfil de público ideal, trabalhando o conceito de dualidade"
+    },
+    {
+      "start": 75.44000244140625,
+      "end": 83.16000366210938,
+      "text": "e o conceito de dualidade vai exigir de você pesquisa, se aprofundar, buscar informações no mercado,"
+    },
+    {
+      "start": 83.16000366210938,
+      "end": 88.91999816894531,
+      "text": "buscar informações na internet sobre esse perfil de público que você quer atender."
+    },
+    {
+      "start": 88.91999816894531,
+      "end": 97.4800033569336,
+      "text": "Se você ainda quiser ser mais incisivo, você vai tentar buscar, encontrar pessoas, empresas, o perfil que você"
+    },
+    {
+      "start": 97.4800033569336,
+      "end": 103.95999908447266,
+      "text": "quer atender, fazer algum tipo de pesquisa, fazer perguntas para esse público para realmente bater o martelo"
+    },
+    {
+      "start": 103.95999908447266,
+      "end": 109.12000274658203,
+      "text": "e ter certeza se é com esse público que você quer trabalhar. Trazendo um exemplo bem prático aqui para vocês"
+    },
+    {
+      "start": 109.12000274658203,
+      "end": 117.36000061035156,
+      "text": "sobre o conceito de dualidade, basicamente a gente trabalha com dois parâmetros aqui que são bem importantes."
+    },
+    {
+      "start": 117.36000061035156,
+      "end": 127.12000274658203,
+      "text": "O primeiro parâmetro é o parâmetro do desejo, quais são os desejos desse público que eu quero atingir."
+    },
+    {
+      "start": 127.12000274658203,
+      "end": 135.1199951171875,
+      "text": "Depois eu tenho o segundo parâmetro, que é o parâmetro dos problemas. Eu preciso saber quais são os problemas"
+    },
+    {
+      "start": 135.1199951171875,
+      "end": 143.1199951171875,
+      "text": "que esse público específico que eu quero atingir, ele tem. Para exemplificar cada vez mais para você fixar"
+    },
+    {
+      "start": 143.1199951171875,
+      "end": 151.1199951171875,
+      "text": "esse processo de entender a dualidade e mapear o teu perfil de cliente ideal, eu vou trazer aqui como exemplo"
+    },
+    {
+      "start": 151.1199951171875,
+      "end": 159.1199951171875,
+      "text": "Infoprodutores, que é um perfil de cliente que eu atendo bastante, então está fresco aqui na minha memória"
+    },
+    {
+      "start": 159.1199951171875,
+      "end": 166.1199951171875,
+      "text": "para eu poder explicar para vocês esse conceito aqui de dualidade. Então eu olhei para todos os potenciais públicos"
+    },
+    {
+      "start": 166.1199951171875,
+      "end": 176.1199951171875,
+      "text": "que eu posso atingir, entre meios, startups, independente do nicho etc, e fiz um nicho aqui, um nicho de Infoprodutor."
+    },
+    {
+      "start": 176.1199951171875,
+      "end": 183.1199951171875,
+      "text": "Dentro do nicho de Infoprodutor eu posso ter vários subnichos, posso ter Infoprodutor de Nutrição, Infoprodutor de Idioma,"
+    },
+    {
+      "start": 183.1199951171875,
+      "end": 190.1199951171875,
+      "text": "Infoprodutor de Nicho Pet, Infoprodutor de vários nichos, então eu consigo ainda subnichar se eu quiser."
+    },
+    {
+      "start": 190.1199951171875,
+      "end": 198.1199951171875,
+      "text": "Aqui especificamente eu vou pegar só o nicho de Infoprodutor, o que a gente pode colocar aqui como exemplo."
+    },
+    {
+      "start": 198.1199951171875,
+      "end": 206.1199951171875,
+      "text": "Tudo o que eu considero como desejos, caso aqui o Infoprodutor que é o nosso exemplo, é tudo o que ele quer."
+    },
+    {
+      "start": 206.1199951171875,
+      "end": 217.1199951171875,
+      "text": "Então ele está querendo alguma coisa, ele quer alguma coisa, só que ele tem problemas, e os problemas são os impedimentos."
+    },
+    {
+      "start": 218.1199951171875,
+      "end": 228.1199951171875,
+      "text": "E qual é o nosso papel nessa fase aqui de dualidade? É entender tudo o que um perfil de cliente ideal ele quer,"
+    },
+    {
+      "start": 228.1199951171875,
+      "end": 233.1199951171875,
+      "text": "e tudo o que está impedindo ele de alcançar isso que ele está desejando."
+    },
+    {
+      "start": 233.1199951171875,
+      "end": 239.1199951171875,
+      "text": "Nosso caso aqui do Infoprodutor, eu já sei quais são os desejos dos nossos Infoprodutores, da maioria dos Infoprodutores que eu já atendi."
+    },
+    {
+      "start": 239.1199951171875,
+      "end": 247.1199951171875,
+      "text": "Eles querem aumentar as vendas, eles querem aumentar o engajamento, eles querem aumentar o tempo de vida do aluno dentro do curso,"
+    },
+    {
+      "start": 247.1199951171875,
+      "end": 256.1199951171875,
+      "text": "eles querem aumentar o ecossistema, eles querem aumentar a retenção, eles querem entregar experiências únicas para os alunos,"
+    },
+    {
+      "start": 256.1199951171875,
+      "end": 261.1199951171875,
+      "text": "eles querem tangibilizar o método de uma forma mais prática para os alunos."
+    },
+    {
+      "start": 261.1199951171875,
+      "end": 266.1199951171875,
+      "text": "Então eu tenho todos esses desejos levantados. E qual é o impedimento?"
+    },
+    {
+      "start": 266.1199951171875,
+      "end": 272.1199951171875,
+      "text": "Especificamente para os Infoprodutores, um dos principais impedimentos é a tecnologia."
+    },
+    {
+      "start": 272.1199951171875,
+      "end": 282.1199951171875,
+      "text": "Eles sabem que precisam desenvolver sistemas, plataformas, ecossistemas, recursos e funcionalidades, soluções automatizadas."
+    },
+    {
+      "start": 282.1199951171875,
+      "end": 288.1199951171875,
+      "text": "Eles sabem, mas o que impedem? Onde que eles encontram? Onde que tem desenvolvedor? Onde que tem agência?"
+    },
+    {
+      "start": 288.1199951171875,
+      "end": 296.1199951171875,
+      "text": "Quem que conhece do mercado de Infoproduto que pode me ajudar, que pode atender esses problemas, essas necessidades que eu tenho?"
+    },
+    {
+      "start": 296.1199951171875,
+      "end": 305.1199951171875,
+      "text": "Então eu fiz todo um processo e um papel de levantar os desejos e levantar os problemas desse meu público,"
+    },
+    {
+      "start": 305.1199951171875,
+      "end": 310.1199951171875,
+      "text": "desse perfil de cliente ideal que eu quero atender, que no caso aqui são Infoprodutores."
+    },
+    {
+      "start": 310.1199951171875,
+      "end": 322.1199951171875,
+      "text": "Esse simples processo aqui se chama dualidade. Existe uma dualidade aqui entre o desejo e o problema."
+    },
+    {
+      "start": 322.1199951171875,
+      "end": 330.1199951171875,
+      "text": "E o que vai resolver essa dualidade é a solução que você vai propor, que você vai criar, que você vai oferecer"
+    },
+    {
+      "start": 330.1199951171875,
+      "end": 337.1199951171875,
+      "text": "e que você vai se comunicar com esse público ideal, esse perfil de cliente ideal."
+    },
+    {
+      "start": 337.1199951171875,
+      "end": 348.1199951171875,
+      "text": "O que vale a gente colocar como um ponto bem importante para se analisar é que nós estamos tratando aqui sempre com o ser humano."
+    },
+    {
+      "start": 348.1199951171875,
+      "end": 355.1199951171875,
+      "text": "Independente do público que você vai atingir, você vai ter sempre um ser humano ali se comunicando com você."
+    },
+    {
+      "start": 355.1199951171875,
+      "end": 365.1199951171875,
+      "text": "E o ser humano, ele é dual. O ser humano na nossa vida, dentro do nosso cotidiano, do nosso dia a dia, existem inúmeras dualidades."
+    },
+    {
+      "start": 365.1199951171875,
+      "end": 375.1199951171875,
+      "text": "Então a gente tem o bem e o mal, a gente tem o alto, a gente tem o baixo, a gente tem a dualidade, por exemplo, dualidade política,"
+    },
+    {
+      "start": 375.1199951171875,
+      "end": 383.1199951171875,
+      "text": "direita, a gente tem a dualidade da esquerda e a gente vai criando várias dualidades ao longo da nossa vida."
+    },
+    {
+      "start": 383.1199951171875,
+      "end": 390.1199951171875,
+      "text": "Dentro dos problemas que a gente vai encontrar no mercado, essa dualidade ela sempre vai existir."
+    },
+    {
+      "start": 390.1199951171875,
+      "end": 397.1199951171875,
+      "text": "Então a partir do momento que você sabe identificar essa dualidade do seu potencial cliente, o desejo que ele tem,"
+    },
+    {
+      "start": 397.1199951171875,
+      "end": 407.1199951171875,
+      "text": "mas o que está impedindo ele de alcançar, isso libera para você ali as possibilidades e os argumentos necessários"
+    },
+    {
+      "start": 407.1199951171875,
+      "end": 414.1199951171875,
+      "text": "para você começar a projetar as soluções que você vai oferecer para o seu potencial cliente."
+    },
+    {
+      "start": 414.1199951171875,
+      "end": 419.1199951171875,
+      "text": "Então o processo de dualidade, esse processo de levantar desejo, de levantar problema,"
+    },
+    {
+      "start": 419.1199951171875,
+      "end": 427.1199951171875,
+      "text": "eu considero que ele foi o elemento que mais gerou resultado para mim no processo de vender software,"
+    },
+    {
+      "start": 427.1199951171875,
+      "end": 431.1199951171875,
+      "text": "de vender projetos personalizados para os meus clientes."
+    },
+    {
+      "start": 431.1199951171875,
+      "end": 438.1199951171875,
+      "text": "Porque quando eu começava a me comunicar com o cliente, eu não focava no desenvolvimento em si,"
+    },
+    {
+      "start": 438.1199951171875,
+      "end": 442.1199951171875,
+      "text": "eu não focava na parte técnica, eu não focava na parte tecnológica,"
+    },
+    {
+      "start": 442.1199951171875,
+      "end": 448.1199951171875,
+      "text": "eu focava em compreender os motivos que fazem o meu cliente entrar em contato comigo."
+    },
+    {
+      "start": 448.1199951171875,
+      "end": 453.1199951171875,
+      "text": "Os motivos que fazem o meu cliente querer aplicar tempo e esforço em um projeto, em um negócio."
+    },
+    {
+      "start": 453.1199951171875,
+      "end": 461.1199951171875,
+      "text": "Querer entender isso é você tentar compreender um pouco o desejo e os problemas desse potencial cliente."
+    },
+    {
+      "start": 461.1199951171875,
+      "end": 467.1199951171875,
+      "text": "A gente já falou bastante sobre dualidade lá no nosso processo de planejamento estrutural de aplicativo."
+    },
+    {
+      "start": 467.1199951171875,
+      "end": 475.1199951171875,
+      "text": "Não foge daquilo lá, é exatamente aquilo de você realmente levantar os desejos, os problemas e pensar nas soluções."
+    },
+    {
+      "start": 475.1199951171875,
+      "end": 482.1199951171875,
+      "text": "A diferença é que para cá você vai pensar em produto, você vai transformar a sua apreciação de serviço em um produto."
+    },
+    {
+      "start": 482.1199951171875,
+      "end": 485.1199951171875,
+      "text": "Na próxima aula a gente vai mapear as soluções."
+    },
+    {
+      "start": 485.1199951171875,
+      "end": 491.1199951171875,
+      "text": "Uma vez que você entendeu que a gente vai sempre buscar os desejos e os problemas de um público específico,"
+    },
+    {
+      "start": 491.1199951171875,
+      "end": 497.1199951171875,
+      "text": "eu preciso começar agora a pensar nas soluções que eu posso entregar para esse público específico."
+    },
+    {
+      "start": 497.1199951171875,
+      "end": 502.1199951171875,
+      "text": "O que vale ressaltar e colocar aqui como asteriscos e observações?"
+    },
+    {
+      "start": 502.1199951171875,
+      "end": 505.1199951171875,
+      "text": "Digamos que você escolha aqui um público específico, dá um exemplo."
+    },
+    {
+      "start": 505.1199951171875,
+      "end": 509.1199951171875,
+      "text": "Você vai escolher empreendedores do nicho pet."
+    },
+    {
+      "start": 509.1199951171875,
+      "end": 514.1199951171875,
+      "text": "Se você vai trabalhar com empreendedores do nicho pet, aí você vai precisar definir."
+    },
+    {
+      "start": 514.1199951171875,
+      "end": 520.1199951171875,
+      "text": "Ah, vão ser pet shops, vão ser veterinários, qual que é o tipo de profissional que você vai trabalhar."
+    },
+    {
+      "start": 520.1199951171875,
+      "end": 521.1199951171875,
+      "text": "Você vai buscar informações."
+    },
+    {
+      "start": 521.1199951171875,
+      "end": 523.1199951171875,
+      "text": "Digamos aqui que sejam os veterinários."
+    },
+    {
+      "start": 523.1199951171875,
+      "end": 530.1199951171875,
+      "text": "Eu preciso fazer uma pesquisa de entender quais são os desejos que um veterinário tem para poder fazer,"
+    },
+    {
+      "start": 530.1199951171875,
+      "end": 535.1199951171875,
+      "text": "para ele ganhar mais, para ele faturar mais, para ele reduzir custo, para ele automatizar."
+    },
+    {
+      "start": 535.1199951171875,
+      "end": 539.1199951171875,
+      "text": "Eu vou fazer indagações para esse público de veterinário."
+    },
+    {
+      "start": 539.1199951171875,
+      "end": 543.1199951171875,
+      "text": "Eu vou entrar em algum grupo onde tenha veterinários."
+    },
+    {
+      "start": 543.1199951171875,
+      "end": 546.1199951171875,
+      "text": "Eu vou ver se alguém conhece algum veterinário para eu entrar em contato."
+    },
+    {
+      "start": 546.1199951171875,
+      "end": 548.1199951171875,
+      "text": "Eu preciso buscar informações de alguma forma."
+    },
+    {
+      "start": 548.1199951171875,
+      "end": 550.1199951171875,
+      "text": "Eu vou no Google Bard."
+    },
+    {
+      "start": 550.1199951171875,
+      "end": 552.1199951171875,
+      "text": "Você vai buscar informações de alguma forma."
+    },
+    {
+      "start": 552.1199951171875,
+      "end": 554.1199951171875,
+      "text": "Comentários de YouTube, de vídeo."
+    },
+    {
+      "start": 554.1199951171875,
+      "end": 557.1199951171875,
+      "text": "Você vai precisar fazer esse exercício de buscar informações."
+    },
+    {
+      "start": 557.1199951171875,
+      "end": 564.1199951171875,
+      "text": "Uma vez que você levanta os desejos do veterinário, automaticamente as pessoas gostam de falar dos problemas."
+    },
+    {
+      "start": 564.1199951171875,
+      "end": 567.1199951171875,
+      "text": "E aí os veterinários vão falar dos problemas que eles têm."
+    },
+    {
+      "start": 567.1199951171875,
+      "end": 571.1199951171875,
+      "text": "Para não conseguir faturar mais, para não conseguir trazer mais pessoas para dentro da veterinária,"
+    },
+    {
+      "start": 571.1199951171875,
+      "end": 574.1199951171875,
+      "text": "para não conseguir fidelizar clientes, para não conseguir automatizar."
+    },
+    {
+      "start": 574.1199951171875,
+      "end": 579.1199951171875,
+      "text": "Então você vai começando a compreender os desejos e os problemas dos veterinários"
+    },
+    {
+      "start": 579.1199951171875,
+      "end": 584.1199951171875,
+      "text": "para posteriormente você pensar em soluções personalizadas para oferecer para eles."
+    },
+    {
+      "start": 584.1199951171875,
+      "end": 589.1199951171875,
+      "text": "Na próxima aula, a gente vai entender um pouquinho como que através desse conceito de dualidade"
+    },
+    {
+      "start": 589.1199951171875,
+      "end": 594.1199951171875,
+      "text": "e levantando desejo e problema, a gente acaba levantando possíveis soluções"
+    },
+    {
+      "start": 594.1199951171875,
+      "end": 597.1199951171875,
+      "text": "para produtificar a nossa prestação de serviço."
+    },
+    {
+      "start": 604.1199951171875,
+      "end": 607.1199951171875,
+      "text": "Legendas pela comunidade Amara.org"
+    }
+  ],
+  "fullText": "Fala comigo turma, vamos tentar identificar aqui o nosso ICP, hipotético para você entender um pouquinho como que a gente mapeia um perfil de público ideal, um perfil de cliente ideal e também dominar aí os conceitos de dualidade. Quando a gente fala sobre ICP, perfil de cliente ideal, perfil de público ideal, a gente tem inúmeras possibilidades a nossa disposição. Então a gente pode ter MEIs, empreendedores, empresas, startups, a gente pode nichar por segmento, então a gente tem empreendedores, empresários, empresas na saúde, pet, a gente pode ter games, a gente pode ter pesca, a gente vai ter vários nichos, vários segmentos e você vai precisar olhar para esses nichos, olhar para esses segmentos, olhar para esses potenciais perfis que você desejaria trabalhar, desejaria vender alguma solução para você conseguir ter realmente uma segmentação de qualidade, oferecer algo sob medida para essa galera entender qual é o canal de ativação e ter as ações para aumentar a taxa de conversão. Eu gosto sempre de fazer um bom exercício para identificar o ICP, identificar o teu perfil de público ideal, trabalhando o conceito de dualidade e o conceito de dualidade vai exigir de você pesquisa, se aprofundar, buscar informações no mercado, buscar informações na internet sobre esse perfil de público que você quer atender. Se você ainda quiser ser mais incisivo, você vai tentar buscar, encontrar pessoas, empresas, o perfil que você quer atender, fazer algum tipo de pesquisa, fazer perguntas para esse público para realmente bater o martelo e ter certeza se é com esse público que você quer trabalhar. Trazendo um exemplo bem prático aqui para vocês sobre o conceito de dualidade, basicamente a gente trabalha com dois parâmetros aqui que são bem importantes. O primeiro parâmetro é o parâmetro do desejo, quais são os desejos desse público que eu quero atingir. Depois eu tenho o segundo parâmetro, que é o parâmetro dos problemas. Eu preciso saber quais são os problemas que esse público específico que eu quero atingir, ele tem. Para exemplificar cada vez mais para você fixar esse processo de entender a dualidade e mapear o teu perfil de cliente ideal, eu vou trazer aqui como exemplo Infoprodutores, que é um perfil de cliente que eu atendo bastante, então está fresco aqui na minha memória para eu poder explicar para vocês esse conceito aqui de dualidade. Então eu olhei para todos os potenciais públicos que eu posso atingir, entre meios, startups, independente do nicho etc, e fiz um nicho aqui, um nicho de Infoprodutor. Dentro do nicho de Infoprodutor eu posso ter vários subnichos, posso ter Infoprodutor de Nutrição, Infoprodutor de Idioma, Infoprodutor de Nicho Pet, Infoprodutor de vários nichos, então eu consigo ainda subnichar se eu quiser. Aqui especificamente eu vou pegar só o nicho de Infoprodutor, o que a gente pode colocar aqui como exemplo. Tudo o que eu considero como desejos, caso aqui o Infoprodutor que é o nosso exemplo, é tudo o que ele quer. Então ele está querendo alguma coisa, ele quer alguma coisa, só que ele tem problemas, e os problemas são os impedimentos. E qual é o nosso papel nessa fase aqui de dualidade? É entender tudo o que um perfil de cliente ideal ele quer, e tudo o que está impedindo ele de alcançar isso que ele está desejando. Nosso caso aqui do Infoprodutor, eu já sei quais são os desejos dos nossos Infoprodutores, da maioria dos Infoprodutores que eu já atendi. Eles querem aumentar as vendas, eles querem aumentar o engajamento, eles querem aumentar o tempo de vida do aluno dentro do curso, eles querem aumentar o ecossistema, eles querem aumentar a retenção, eles querem entregar experiências únicas para os alunos, eles querem tangibilizar o método de uma forma mais prática para os alunos. Então eu tenho todos esses desejos levantados. E qual é o impedimento? Especificamente para os Infoprodutores, um dos principais impedimentos é a tecnologia. Eles sabem que precisam desenvolver sistemas, plataformas, ecossistemas, recursos e funcionalidades, soluções automatizadas. Eles sabem, mas o que impedem? Onde que eles encontram? Onde que tem desenvolvedor? Onde que tem agência? Quem que conhece do mercado de Infoproduto que pode me ajudar, que pode atender esses problemas, essas necessidades que eu tenho? Então eu fiz todo um processo e um papel de levantar os desejos e levantar os problemas desse meu público, desse perfil de cliente ideal que eu quero atender, que no caso aqui são Infoprodutores. Esse simples processo aqui se chama dualidade. Existe uma dualidade aqui entre o desejo e o problema. E o que vai resolver essa dualidade é a solução que você vai propor, que você vai criar, que você vai oferecer e que você vai se comunicar com esse público ideal, esse perfil de cliente ideal. O que vale a gente colocar como um ponto bem importante para se analisar é que nós estamos tratando aqui sempre com o ser humano. Independente do público que você vai atingir, você vai ter sempre um ser humano ali se comunicando com você. E o ser humano, ele é dual. O ser humano na nossa vida, dentro do nosso cotidiano, do nosso dia a dia, existem inúmeras dualidades. Então a gente tem o bem e o mal, a gente tem o alto, a gente tem o baixo, a gente tem a dualidade, por exemplo, dualidade política, direita, a gente tem a dualidade da esquerda e a gente vai criando várias dualidades ao longo da nossa vida. Dentro dos problemas que a gente vai encontrar no mercado, essa dualidade ela sempre vai existir. Então a partir do momento que você sabe identificar essa dualidade do seu potencial cliente, o desejo que ele tem, mas o que está impedindo ele de alcançar, isso libera para você ali as possibilidades e os argumentos necessários para você começar a projetar as soluções que você vai oferecer para o seu potencial cliente. Então o processo de dualidade, esse processo de levantar desejo, de levantar problema, eu considero que ele foi o elemento que mais gerou resultado para mim no processo de vender software, de vender projetos personalizados para os meus clientes. Porque quando eu começava a me comunicar com o cliente, eu não focava no desenvolvimento em si, eu não focava na parte técnica, eu não focava na parte tecnológica, eu focava em compreender os motivos que fazem o meu cliente entrar em contato comigo. Os motivos que fazem o meu cliente querer aplicar tempo e esforço em um projeto, em um negócio. Querer entender isso é você tentar compreender um pouco o desejo e os problemas desse potencial cliente. A gente já falou bastante sobre dualidade lá no nosso processo de planejamento estrutural de aplicativo. Não foge daquilo lá, é exatamente aquilo de você realmente levantar os desejos, os problemas e pensar nas soluções. A diferença é que para cá você vai pensar em produto, você vai transformar a sua apreciação de serviço em um produto. Na próxima aula a gente vai mapear as soluções. Uma vez que você entendeu que a gente vai sempre buscar os desejos e os problemas de um público específico, eu preciso começar agora a pensar nas soluções que eu posso entregar para esse público específico. O que vale ressaltar e colocar aqui como asteriscos e observações? Digamos que você escolha aqui um público específico, dá um exemplo. Você vai escolher empreendedores do nicho pet. Se você vai trabalhar com empreendedores do nicho pet, aí você vai precisar definir. Ah, vão ser pet shops, vão ser veterinários, qual que é o tipo de profissional que você vai trabalhar. Você vai buscar informações. Digamos aqui que sejam os veterinários. Eu preciso fazer uma pesquisa de entender quais são os desejos que um veterinário tem para poder fazer, para ele ganhar mais, para ele faturar mais, para ele reduzir custo, para ele automatizar. Eu vou fazer indagações para esse público de veterinário. Eu vou entrar em algum grupo onde tenha veterinários. Eu vou ver se alguém conhece algum veterinário para eu entrar em contato. Eu preciso buscar informações de alguma forma. Eu vou no Google Bard. Você vai buscar informações de alguma forma. Comentários de YouTube, de vídeo. Você vai precisar fazer esse exercício de buscar informações. Uma vez que você levanta os desejos do veterinário, automaticamente as pessoas gostam de falar dos problemas. E aí os veterinários vão falar dos problemas que eles têm. Para não conseguir faturar mais, para não conseguir trazer mais pessoas para dentro da veterinária, para não conseguir fidelizar clientes, para não conseguir automatizar. Então você vai começando a compreender os desejos e os problemas dos veterinários para posteriormente você pensar em soluções personalizadas para oferecer para eles. Na próxima aula, a gente vai entender um pouquinho como que através desse conceito de dualidade e levantando desejo e problema, a gente acaba levantando possíveis soluções para produtificar a nossa prestação de serviço. Legendas pela comunidade Amara.org"
+}
