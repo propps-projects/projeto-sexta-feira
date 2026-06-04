@@ -98,10 +98,24 @@ TL;DR after deploy:
 2. **Add Custom Connector** → URL `https://your.domain/mcp`, Bearer token = the `MCP_AUTH_TOKEN` value from `.env`
 3. Connect and use in any chat
 
-## Connecting to ChatGPT
+## Connecting to ChatGPT (Apps SDK)
 
-- **Apps SDK** (custom GPT with native widget rendering): change `playerResource` in `src/ui/player.ts` to pass `adapters: { appsSdk: { enabled: true } }` to `createUIResource`. The same HTTP server works as the backend.
-- **Custom Connector** (settings → MCP): point at the same `https://your.domain/mcp` URL with the bearer token.
+The HTTP server exposes **two endpoints** that share the same tools but ship different MCP-UI MIME types so each host's renderer accepts them:
+
+| Path | MIME type | Use for |
+|---|---|---|
+| `/mcp` | `text/html;profile=mcp-app` | Claude Desktop, Claude.ai, Claude Code |
+| `/mcp-gpt` | `text/html+skybridge` | ChatGPT Apps SDK |
+
+To register in ChatGPT:
+
+1. Go to https://chatgpt.com/apps (developer mode required — toggle in Settings → Account)
+2. **Create app** → **Connect MCP server**
+3. URL: `https://your.domain/mcp-gpt` *(note the `-gpt` suffix)*
+4. Authentication: Bearer token (if `MCP_AUTH_TOKEN` is set in your env)
+5. Test in any ChatGPT conversation: *"Me mostra a aula 6 do agentclass"*
+
+ChatGPT's Apps SDK renderer is currently more complete than Claude's MCP UI renderer, so the inline Panda player is likeliest to actually appear here.
 
 ## Example interactions
 

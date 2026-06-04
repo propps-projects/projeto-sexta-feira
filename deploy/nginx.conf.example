@@ -20,7 +20,8 @@ server {
         proxy_http_version 1.1;
     }
 
-    location /mcp {
+    # Both /mcp (Claude) and /mcp-gpt (ChatGPT Apps SDK) share the same backend.
+    location ~ ^/(mcp|mcp-gpt) {
         proxy_pass http://127.0.0.1:3333;
         proxy_http_version 1.1;
         # Streaming HTTP / SSE — disable buffering and extend timeouts.

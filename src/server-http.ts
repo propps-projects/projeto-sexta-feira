@@ -13,7 +13,13 @@ import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { buildServer } from "./build-server.ts";
 
 const PORT = Number(process.env.PORT || 3333);
-const ENDPOINT = process.env.MCP_ENDPOINT || "/mcp";
+// Two endpoints share the same tools but use different MCP-UI adapters:
+//   /mcp     → mcpApps adapter (text/html;profile=mcp-app) for Claude clients
+//   /mcp-gpt → appsSdk adapter (text/html+skybridge)       for ChatGPT Apps SDK
+const ENDPOINTS = {
+  "/mcp": "mcpApps" as const,
+  "/mcp-gpt": "appsSdk" as const,
+};
 // Optional bearer token to gate the endpoint. Required for any public deploy
 // (VPS, Cloudflare, etc.) — Claude.ai sends it via Authorization header.
 const AUTH_TOKEN = process.env.MCP_AUTH_TOKEN || "";
@@ -50,10 +56,14 @@ const httpServer = http.createServer(async (req, res) => {
       return;
     }
 
-    if (!req.url || !req.url.startsWith(ENDPOINT)) {
+    // Route by endpoint prefix to pick the MCP-UI adapter for this session.
+    const matchedPath = (Object.keys(ENDPOINTS) as Array<keyof typeof ENDPOINTS>)
+      .find((p) => req.url === p || req.url!.startsWith(p + "?"));
+    if (!req.url || !matchedPath) {
       res.writeHead(404).end("not found");
       return;
     }
+    const adapterMode = ENDPOINTS[matchedPath];
 
     if (AUTH_TOKEN) {
       const got = (req.headers.authorization || "").replace(/^Bearer\s+/i, "");
@@ -81,7 +91,7 @@ const httpServer = http.createServer(async (req, res) => {
         transport.onclose = () => {
           if (transport!.sessionId) transports.delete(transport!.sessionId);
         };
-        const server = buildServer();
+        const server = buildServer(adapterMode);
         await server.connect(transport);
       }
 
@@ -111,5 +121,6 @@ const httpServer = http.createServer(async (req, res) => {
 
 httpServer.listen(PORT, () => {
   const auth = AUTH_TOKEN ? "with bearer auth" : "WITHOUT auth (set MCP_AUTH_TOKEN for public deploys)";
-  console.error(`agentclass MCP HTTP server listening on :${PORT}${ENDPOINT} ${auth}`);
+  const routes = Object.entries(ENDPOINTS).map(([p, m]) => `${p} (${m})`).join(", ");
+  console.error(`agentclass MCP HTTP server listening on :${PORT} — routes: ${routes} ${auth}`);
 });

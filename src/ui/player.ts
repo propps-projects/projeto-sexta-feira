@@ -81,16 +81,20 @@ function buildHtml(lesson: Lesson, startSec?: number): string {
 </html>`;
 }
 
-export function playerResource(lesson: Lesson, startSec?: number) {
+export type AdapterMode = "mcpApps" | "appsSdk";
+
+export function playerResource(lesson: Lesson, startSec?: number, mode: AdapterMode = "mcpApps") {
   const t = startSec ? `?t=${Math.floor(startSec)}` : "";
+  // mcpApps → MIME `text/html;profile=mcp-app` (Claude clients)
+  // appsSdk → MIME `text/html+skybridge`        (ChatGPT Apps SDK)
+  const adapters = mode === "appsSdk"
+    ? ({ appsSdk: { enabled: true } } as const)
+    : ({ mcpApps: { enabled: true } } as const);
   return createUIResource({
     uri: `ui://lesson/${lesson.id}${t}`,
     content: { type: "rawHtml", htmlString: buildHtml(lesson, startSec) },
     encoding: "text",
-    // Emits MIME `text/html;profile=mcp-app` (the only one Claude Desktop declares
-    // in its `io.modelcontextprotocol/ui` capability) + injects the mcp-apps adapter.
-    adapters: { mcpApps: { enabled: true } },
-    // Tell the host how much vertical space to allocate.
+    adapters,
     uiMetadata: { "preferred-frame-size": ["100%", "420px"] },
   });
 }

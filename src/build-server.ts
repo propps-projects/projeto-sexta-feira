@@ -4,14 +4,20 @@ import { loadLessons, findLesson, formatDuration, formatTimestamp } from "./lib/
 import { loadTranscript, excerptFor } from "./lib/transcripts.ts";
 import { openDb, searchChunks } from "./lib/store.ts";
 import { embedQuery } from "./lib/embeddings.ts";
-import { playerResource } from "./ui/player.ts";
+import { playerResource, type AdapterMode } from "./ui/player.ts";
 
 /**
  * Builds an McpServer with all tools registered. Used by both the stdio entry
  * (src/server.ts) and the HTTP entry (src/server-http.ts) — same tools, two
  * transports. A new instance is created per HTTP session.
+ *
+ * `adapterMode` controls which MCP-UI adapter the `play_lesson` resource uses:
+ *   - "mcpApps"  → MIME `text/html;profile=mcp-app` (Claude clients)
+ *   - "appsSdk"  → MIME `text/html+skybridge`      (ChatGPT Apps SDK)
+ *
+ * One server instance per session means the choice can vary by endpoint.
  */
-export function buildServer(): McpServer {
+export function buildServer(adapterMode: AdapterMode = "mcpApps"): McpServer {
   const server = new McpServer(
     { name: "agentclass", version: "0.1.0" },
     {
@@ -116,7 +122,7 @@ export function buildServer(): McpServer {
     async ({ lessonNumber, lessonId, startSec }) => {
       const lesson = findLesson({ lessonId, lessonNumber });
       if (!lesson) return { isError: true, content: [{ type: "text", text: `Aula não encontrada.` }] };
-      const resource = playerResource(lesson, startSec);
+      const resource = playerResource(lesson, startSec, adapterMode);
       const directUrl = new URL(lesson.embedUrl);
       if (startSec && startSec > 0) {
         directUrl.searchParams.set("startTime", String(Math.floor(startSec)));
