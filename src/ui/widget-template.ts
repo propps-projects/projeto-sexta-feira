@@ -1,24 +1,20 @@
-import { readFileSync } from "node:fs";
-import { resolve, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const HLS_JS_PATH = resolve(__dirname, "../../node_modules/hls.js/dist/hls.min.js");
-
-let _hlsJsSource: string | null = null;
-function hlsJsSource(): string {
-  if (!_hlsJsSource) _hlsJsSource = readFileSync(HLS_JS_PATH, "utf8");
-  return _hlsJsSource;
-}
-
 /**
- * Single HTML template registered as the ChatGPT Apps SDK widget for
- * play_lesson. ChatGPT renders this once per tool call into a sandboxed
- * iframe and injects the tool's `structuredContent` at
- * `window.openai.toolOutput`. The script below reads from there and
- * drives an <video> + hls.js player.
+ * ChatGPT Apps SDK widget template for play_lesson.
  *
- * Reference: https://developers.openai.com/apps-sdk/build/custom-ux
+ * Strategy: render an <iframe> pointing at Panda's player embed instead of
+ * trying to play HLS in a native <video>. This is what Coursera/YouTube/etc
+ * do inside Apps SDK. Reason:
+ *
+ *   - Apps SDK's iframe has a strict `media-src` CSP that doesn't include
+ *     external CDNs *or* `blob:` URLs, so MediaSource Extensions can't feed
+ *     the <video>. There's no documented widgetCSP key to fix that.
+ *   - But `frame-src` IS configurable via widgetCSP.frame_domains, so an
+ *     <iframe> to Panda's player domain is allowed.
+ *   - Inside that nested iframe Panda's own player runs in its own origin
+ *     with its own CSP context — HLS playback works there.
+ *
+ * The widget reads `structuredContent.embedUrl` from `window.openai.toolOutput`
+ * and points the iframe at it.
  */
 export function buildPlayerWidgetHtml(): string {
   return `<!doctype html>
@@ -33,7 +29,7 @@ export function buildPlayerWidgetHtml(): string {
   .header strong { color:#fff; }
   .header .sub { color:#aaa; font-size:12px; margin-top:2px; }
   .player { flex:1 1 auto; position:relative; min-height:360px; background:#000; }
-  video { position:absolute; inset:0; width:100%; height:100%; }
+  iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
   .msg { position:absolute; inset:0; padding:14px; font-size:13px; display:flex; align-items:center; justify-content:center; text-align:center; color:#888; }
   .msg.err { color:#f88; }
 </style>
@@ -44,13 +40,12 @@ export function buildPlayerWidgetHtml(): string {
     <div id="sub" class="sub"></div>
   </div>
   <div class="player">
-    <video id="v" controls playsinline></video>
+    <iframe id="frame" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
     <div id="msg" class="msg" style="display:none"></div>
   </div>
-  <script>${hlsJsSource()}</script>
   <script>
     (function() {
-      var v = document.getElementById('v');
+      var frame = document.getElementById('frame');
       var msg = document.getElementById('msg');
       var titleEl = document.getElementById('title');
       var subEl = document.getElementById('sub');
@@ -60,7 +55,6 @@ export function buildPlayerWidgetHtml(): string {
         el.textContent = txt;
         if (err) el.classList.add('err');
       }
-      function hide(el) { el.style.display = 'none'; }
 
       function fmtTime(s) {
         s = Math.floor(s || 0);
@@ -68,42 +62,32 @@ export function buildPlayerWidgetHtml(): string {
         return m + ':' + (r < 10 ? '0' : '') + r;
       }
 
-      function render(data) {
-        if (!data || !data.hlsUrl) {
-          show(msg, 'Sem dados de aula pra tocar.', true);
-          v.style.display = 'none';
-          return;
-        }
-        hide(msg);
-        v.style.display = 'block';
-        var lessonLabel = (data.lessonNumber != null ? ('Aula ' + data.lessonNumber + ' — ') : '') + (data.title || '');
-        titleEl.textContent = lessonLabel || 'Aula';
-        subEl.textContent = data.startSec ? ('Iniciando em ' + fmtTime(data.startSec)) : '';
-        var start = Number(data.startSec) || 0;
-        function seekStart() { if (start > 0) { try { v.currentTime = start; } catch (e) {} } }
-        // Prefer hls.js for ALL browsers: it feeds <video> via MediaSource
-        // Extensions (blob: URL), which CSP allows. Setting video.src to
-        // the HLS URL directly triggers media-src CSP, which Apps SDK
-        // does NOT expose as a configurable directive.
-        if (window.Hls && Hls.isSupported()) {
-          var hls = new Hls({ startPosition: start || -1 });
-          hls.loadSource(data.hlsUrl);
-          hls.attachMedia(v);
-          hls.on(Hls.Events.ERROR, function(_, d) {
-            if (d && d.fatal) show(msg, 'Erro ao carregar o vídeo: ' + (d.details || d.type), true);
-          });
-        } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
-          // Safari native HLS fallback. Inside Apps SDK CSP this will be
-          // blocked (no way to whitelist media-src); outside Apps SDK it's fine.
-          v.src = data.hlsUrl;
-          v.addEventListener('loadedmetadata', seekStart, { once: true });
-        } else {
-          show(msg, 'Seu navegador não suporta HLS playback.', true);
+      function buildSrc(data) {
+        try {
+          var u = new URL(data.embedUrl);
+          if (data.startSec && data.startSec > 0) {
+            var s = Math.floor(data.startSec);
+            u.searchParams.set('startTime', String(s));
+            u.searchParams.set('t', String(s));
+          }
+          return u.toString();
+        } catch (e) {
+          return data.embedUrl;
         }
       }
 
-      // Apps SDK API: render with the data ChatGPT injects.
-      // First try the synchronous handle, then listen for late updates.
+      function render(data) {
+        if (!data || !data.embedUrl) {
+          frame.style.display = 'none';
+          show(msg, 'Sem dados de aula.', true);
+          return;
+        }
+        var lessonLabel = (data.lessonNumber != null ? ('Aula ' + data.lessonNumber + ' — ') : '') + (data.title || '');
+        titleEl.textContent = lessonLabel || 'Aula';
+        subEl.textContent = data.startSec ? ('Iniciando em ' + fmtTime(data.startSec)) : '';
+        frame.src = buildSrc(data);
+      }
+
       function tryRender() {
         if (window.openai && window.openai.toolOutput) {
           render(window.openai.toolOutput);
@@ -112,7 +96,6 @@ export function buildPlayerWidgetHtml(): string {
         return false;
       }
       if (!tryRender()) {
-        // Some hosts inject data after a tick — poll briefly and listen for events.
         var tries = 0;
         var t = setInterval(function() {
           if (tryRender() || ++tries > 20) clearInterval(t);

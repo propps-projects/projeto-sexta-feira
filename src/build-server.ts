@@ -70,48 +70,42 @@ export function buildServer(adapterMode: AdapterMode = "mcpApps"): McpServer {
           // unblock <video> playback inside the Apps SDK iframe — the docs
           // only list connect/resource/frame/redirect, but ChatGPT may
           // honor more if present.
+          // The widget renders an <iframe> pointing at Panda's player. The
+          // important CSP directive is frame_domains (controls frame-src).
+          // Panda's player domain uses the `player-vz-*` subdomain;
+          // wildcards cover both player and CDN hosts.
           "openai/widgetCSP": {
             connect_domains: [
               "https://*.tv.pandavideo.com.br",
               "https://*.pandavideo.com.br",
               "https://cdn.pandavideo.com",
-              "https://b-vz-e2643eed-ceb.tv.pandavideo.com.br",
             ],
             resource_domains: [
               "https://*.tv.pandavideo.com.br",
               "https://cdn.pandavideo.com",
-              "https://b-vz-e2643eed-ceb.tv.pandavideo.com.br",
             ],
-            media_domains: [
-              "blob:",
-              "data:",
+            frame_domains: [
               "https://*.tv.pandavideo.com.br",
-              "https://cdn.pandavideo.com",
-              "https://b-vz-e2643eed-ceb.tv.pandavideo.com.br",
+              "https://*.pandavideo.com.br",
+              "https://player-vz-e2643eed-ceb.tv.pandavideo.com.br",
             ],
-            frame_domains: [],
             redirect_domains: [],
           },
-          // Also try the standard `_meta.ui.csp` shape (camelCase) — some
-          // hosts read this instead of the legacy widgetCSP.
           ui: {
             csp: {
               connectDomains: [
                 "https://*.tv.pandavideo.com.br",
                 "https://cdn.pandavideo.com",
-                "https://b-vz-e2643eed-ceb.tv.pandavideo.com.br",
               ],
               resourceDomains: [
                 "https://*.tv.pandavideo.com.br",
                 "https://cdn.pandavideo.com",
               ],
-              mediaDomains: [
-                "blob:",
-                "data:",
+              frameDomains: [
                 "https://*.tv.pandavideo.com.br",
-                "https://cdn.pandavideo.com",
+                "https://*.pandavideo.com.br",
+                "https://player-vz-e2643eed-ceb.tv.pandavideo.com.br",
               ],
-              frameDomains: [],
             },
           },
           ...(widgetDomain ? { "openai/widgetDomain": widgetDomain } : {}),
