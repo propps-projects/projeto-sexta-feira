@@ -52,10 +52,26 @@ export function buildServer(adapterMode: AdapterMode = "mcpApps"): McpServer {
   // _meta and renders this HTML in a sandboxed iframe. The HTML reads the
   // tool's structuredContent from window.openai.toolOutput.
   if (adapterMode === "appsSdk") {
-    // Optional: a dedicated origin that hosts the widget HTML. Defaults to
-    // OpenAI's sandbox if unset. Settable per-deploy via WIDGET_DOMAIN env
-    // (e.g. "https://agentclass.yourdomain.com" once you have the cert).
     const widgetDomain = process.env.WIDGET_DOMAIN;
+    // CSP per https://developers.openai.com/apps-sdk/build/mcp-server#content-security-policy-csp:
+    // the `_meta.ui.csp` goes inside the resource CONTENT returned by the
+    // readCallback, NOT on the registration metadata. Sub-keys are camelCase.
+    const widgetCsp = {
+      connectDomains: [
+        "https://*.tv.pandavideo.com.br",
+        "https://*.pandavideo.com.br",
+        "https://cdn.pandavideo.com",
+      ],
+      resourceDomains: [
+        "https://*.tv.pandavideo.com.br",
+        "https://cdn.pandavideo.com",
+      ],
+      frameDomains: [
+        "https://*.tv.pandavideo.com.br",
+        "https://*.pandavideo.com.br",
+        "https://player-vz-e2643eed-ceb.tv.pandavideo.com.br",
+      ],
+    } as const;
     server.registerResource(
       "lesson-player",
       PLAYER_WIDGET_URI,
@@ -63,51 +79,7 @@ export function buildServer(adapterMode: AdapterMode = "mcpApps"): McpServer {
         title: "Player de Aula",
         mimeType: "text/html+skybridge",
         _meta: {
-          "openai/widgetDescription": "Player de vídeo HTML5 + HLS que toca uma aula do curso, com deep-link opcional para timestamp.",
-          // Legacy CSP key REQUIRES snake_case sub-keys. ChatGPT silently
-          // ignores camelCase here and flags the widget as "CSP não definida".
-          // media_domains / blob:/data: scheme entries are an attempt to
-          // unblock <video> playback inside the Apps SDK iframe — the docs
-          // only list connect/resource/frame/redirect, but ChatGPT may
-          // honor more if present.
-          // The widget renders an <iframe> pointing at Panda's player. The
-          // important CSP directive is frame_domains (controls frame-src).
-          // Panda's player domain uses the `player-vz-*` subdomain;
-          // wildcards cover both player and CDN hosts.
-          "openai/widgetCSP": {
-            connect_domains: [
-              "https://*.tv.pandavideo.com.br",
-              "https://*.pandavideo.com.br",
-              "https://cdn.pandavideo.com",
-            ],
-            resource_domains: [
-              "https://*.tv.pandavideo.com.br",
-              "https://cdn.pandavideo.com",
-            ],
-            frame_domains: [
-              "https://*.tv.pandavideo.com.br",
-              "https://*.pandavideo.com.br",
-              "https://player-vz-e2643eed-ceb.tv.pandavideo.com.br",
-            ],
-            redirect_domains: [],
-          },
-          ui: {
-            csp: {
-              connectDomains: [
-                "https://*.tv.pandavideo.com.br",
-                "https://cdn.pandavideo.com",
-              ],
-              resourceDomains: [
-                "https://*.tv.pandavideo.com.br",
-                "https://cdn.pandavideo.com",
-              ],
-              frameDomains: [
-                "https://*.tv.pandavideo.com.br",
-                "https://*.pandavideo.com.br",
-                "https://player-vz-e2643eed-ceb.tv.pandavideo.com.br",
-              ],
-            },
-          },
+          "openai/widgetDescription": "Player de vídeo da aula do curso, com deep-link opcional para timestamp.",
           ...(widgetDomain ? { "openai/widgetDomain": widgetDomain } : {}),
         },
       },
@@ -116,6 +88,19 @@ export function buildServer(adapterMode: AdapterMode = "mcpApps"): McpServer {
           uri: uri.toString(),
           mimeType: "text/html+skybridge",
           text: buildPlayerWidgetHtml(),
+          _meta: {
+            ui: {
+              csp: widgetCsp,
+            },
+            // Legacy snake_case kept as a belt-and-suspenders compatibility
+            // key; current docs document only `_meta.ui.csp` (camelCase).
+            "openai/widgetCSP": {
+              connect_domains: widgetCsp.connectDomains,
+              resource_domains: widgetCsp.resourceDomains,
+              frame_domains: widgetCsp.frameDomains,
+              redirect_domains: [],
+            },
+          },
         }],
       }),
     );
