@@ -5,6 +5,11 @@ import { loadTranscript, excerptFor } from "./lib/transcripts.ts";
 import { openDb, searchChunks } from "./lib/store.ts";
 import { embedQuery } from "./lib/embeddings.ts";
 import { playerResource, type AdapterMode } from "./ui/player.ts";
+import { buildPlayerWidgetHtml } from "./ui/widget-template.ts";
+
+// ChatGPT Apps SDK widget URI for the lesson player. Registered as an MCP
+// resource on /mcp-gpt; referenced from play_lesson's `openai/outputTemplate`.
+const PLAYER_WIDGET_URI = "ui://widget/lesson-player.html";
 
 /**
  * Builds an McpServer with all tools registered. Used by both the stdio entry
@@ -41,6 +46,43 @@ export function buildServer(adapterMode: AdapterMode = "mcpApps"): McpServer {
     idempotentHint: true,
     openWorldHint: false,
   } as const;
+
+  // On the Apps SDK endpoint we register the lesson-player widget as a top-level
+  // MCP resource. ChatGPT resolves the URI from play_lesson's outputTemplate
+  // _meta and renders this HTML in a sandboxed iframe. The HTML reads the
+  // tool's structuredContent from window.openai.toolOutput.
+  if (adapterMode === "appsSdk") {
+    server.registerResource(
+      "lesson-player",
+      PLAYER_WIDGET_URI,
+      {
+        title: "Player de Aula",
+        mimeType: "text/html+skybridge",
+        _meta: {
+          "openai/widgetDescription": "Player de vídeo HTML5 + HLS que toca uma aula do curso, com deep-link opcional para timestamp.",
+          "openai/widgetCSP": {
+            connectDomains: [
+              "https://*.tv.pandavideo.com.br",
+              "https://*.pandavideo.com.br",
+              "https://cdn.pandavideo.com",
+            ],
+            frameDomains: [],
+            resourceDomains: [
+              "https://*.tv.pandavideo.com.br",
+              "https://cdn.pandavideo.com",
+            ],
+          },
+        },
+      },
+      async (uri) => ({
+        contents: [{
+          uri: uri.toString(),
+          mimeType: "text/html+skybridge",
+          text: buildPlayerWidgetHtml(),
+        }],
+      }),
+    );
+  }
 
   server.registerTool(
     "list_lessons",
@@ -193,30 +235,59 @@ export function buildServer(adapterMode: AdapterMode = "mcpApps"): McpServer {
         title: z.string(),
         id: z.string(),
         embedUrl: z.string(),
+        hlsUrl: z.string(),
         startSec: z.number().optional(),
       },
       annotations: readOnlyAnnotations,
+      // ChatGPT Apps SDK: this _meta tells the client to render the resource
+      // at the given URI as the widget for this tool's result. Without it,
+      // ChatGPT falls back to the "Arquivo" file card. mcpApps clients ignore.
+      _meta: adapterMode === "appsSdk"
+        ? {
+            "openai/outputTemplate": PLAYER_WIDGET_URI,
+            "openai/toolInvocation/invoking": "Carregando aula...",
+            "openai/toolInvocation/invoked": "Aula carregada",
+            "openai/widgetAccessible": true,
+          }
+        : undefined,
     },
     async ({ lessonNumber, lessonId, startSec }) => {
       const lesson = findLesson({ lessonId, lessonNumber });
       if (!lesson) return { isError: true, content: [{ type: "text", text: `Aula não encontrada.` }] };
-      const resource = playerResource(lesson, startSec, adapterMode);
+
       const directUrl = new URL(lesson.embedUrl);
       if (startSec && startSec > 0) {
         directUrl.searchParams.set("startTime", String(Math.floor(startSec)));
         directUrl.searchParams.set("t", String(Math.floor(startSec)));
       }
-      const label = startSec
-        ? `**Aula ${lesson.lessonNumber} — ${lesson.title}** (a partir de ${formatTimestamp(startSec)})\n\nSe o player não aparecer aqui, [clica aqui pra abrir no navegador](${directUrl.toString()}).`
-        : `**Aula ${lesson.lessonNumber} — ${lesson.title}**\n\nSe o player não aparecer aqui, [clica aqui pra abrir no navegador](${directUrl.toString()}).`;
       const structuredContent = {
         lessonNumber: lesson.lessonNumber,
         title: lesson.title,
         id: lesson.id,
         embedUrl: directUrl.toString(),
-        ...(startSec ? { startSec } : {}),
+        hlsUrl: lesson.hlsUrl,
+        ...(startSec ? { startSec: Math.floor(startSec) } : {}),
       };
-      return { content: [{ type: "text", text: label }, resource], structuredContent };
+      const label = startSec
+        ? `**Aula ${lesson.lessonNumber} — ${lesson.title}** (a partir de ${formatTimestamp(startSec)})`
+        : `**Aula ${lesson.lessonNumber} — ${lesson.title}**`;
+
+      // On Apps SDK we omit the embedded resource: ChatGPT renders the widget
+      // from the URI in _meta. Including the resource here is what made it
+      // show as an "Arquivo" file card.
+      if (adapterMode === "appsSdk") {
+        return {
+          content: [{ type: "text", text: label }],
+          structuredContent,
+          _meta: { "openai/outputTemplate": PLAYER_WIDGET_URI },
+        };
+      }
+
+      // On Claude (mcpApps) we keep the embedded MCP-UI resource + the
+      // fallback link, since Claude's MCP UI renderer is the path there.
+      const resource = playerResource(lesson, startSec, adapterMode);
+      const labelClaude = `${label}\n\nSe o player não aparecer aqui, [clica aqui pra abrir no navegador](${directUrl.toString()}).`;
+      return { content: [{ type: "text", text: labelClaude }, resource], structuredContent };
     },
   );
 
