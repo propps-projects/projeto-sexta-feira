@@ -230,9 +230,27 @@ async function authorizePost(tenant: Tenant, req: IncomingMessage, res: ServerRe
     await sendMagicLinkEmail({ to: email, url, tenantName: tenant.name });
   } catch (err) {
     console.error("Magic link send failed:", err);
-    return html(res, 500, `<p>Não foi possível enviar o email agora. Tente de novo.</p>`);
+    const debug = String(err).slice(0, 400);
+    return html(res, 500, sendFailedHtml({ tenantSlug: tenant.slug, debug }));
   }
   html(res, 200, magicLinkSentHtml({ email, tenantName: tenant.name }));
+}
+
+function sendFailedHtml(args: { tenantSlug: string; debug: string }): string {
+  return `<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Erro ao enviar email</title>
+<style>
+  body { font-family: system-ui, sans-serif; background:#fafafa; color:#111; max-width:560px; margin:60px auto; padding:0 16px }
+  .card { background:#fff; border:1px solid #e5e5e5; border-radius:12px; padding:24px }
+  h1 { font-size: 20px; margin: 0 0 12px }
+  pre { background:#f3f3f3; padding:12px; border-radius:8px; font-size:12px; overflow:auto; white-space:pre-wrap; word-break:break-word }
+  a { display:inline-block; margin-top:16px; color:#06c; text-decoration:none; font-size:14px }
+</style>
+<div class="card">
+  <h1>⚠️ Não conseguimos enviar seu email agora</h1>
+  <p>Tente novamente em alguns minutos. Se persistir, mande o detalhe abaixo pro suporte:</p>
+  <pre>${esc(args.debug)}</pre>
+  <a href="/t/${esc(args.tenantSlug)}/oauth/authorize">← Tentar novamente</a>
+</div>`;
 }
 
 async function verify(tenant: Tenant, req: IncomingMessage, res: ServerResponse): Promise<void> {
