@@ -19,7 +19,8 @@
     "import:vma:api": "tsx scripts/cli/import-mvp-data-api.ts",
     "hotmart:link": "tsx scripts/cli/link-hotmart-product.ts",
     "oauth:register": "tsx scripts/cli/register-oauth-client.ts",
-    "admin:invite": "tsx scripts/cli/invite-admin.ts"
+    "admin:invite": "tsx scripts/cli/invite-admin.ts",
+    "tenant:change-plan": "tsx scripts/cli/change-plan.ts"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.0.0",

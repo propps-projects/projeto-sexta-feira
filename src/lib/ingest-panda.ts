@@ -48,8 +48,9 @@ interface LessonStatus {
 
 export interface StartIngestResult {
   ok: boolean;
-  reason?: "missing_panda_key" | "missing_folder_id" | "already_running" | "course_not_found" | "no_videos";
+  reason?: "missing_panda_key" | "missing_folder_id" | "already_running" | "course_not_found" | "no_videos" | "quota_transcribe";
   videoCount?: number;
+  detail?: string;
 }
 
 /**
@@ -65,9 +66,9 @@ export async function startPandaIngest(
     return { ok: false, reason: "already_running" };
   }
 
-  const tenant = await sb.selectOne<TenantPandaConfig>(
+  const tenant = await sb.selectOne<TenantPandaConfig & { plan_id: string }>(
     "tenants",
-    `id=eq.${tenantId}&select=id,panda_api_key_enc`,
+    `id=eq.${tenantId}&select=id,plan_id,panda_api_key_enc`,
   );
   if (!tenant?.panda_api_key_enc) {
     return { ok: false, reason: "missing_panda_key" };
@@ -88,6 +89,21 @@ export async function startPandaIngest(
   const panda = new PandaClient(tenant.panda_api_key_enc);
   const videos = await panda.listFolderVideos(folderId);
   if (!videos.length) return { ok: false, reason: "no_videos" };
+
+  // Quota: estimated transcribe minutes vs plan
+  const estimatedMinutes = videos.reduce((s, v) => s + (v.length || 0), 0) / 60;
+  try {
+    const { enforceQuota } = await import("./plans.ts");
+    await enforceQuota(tenantId, tenant.plan_id, {
+      kind: "transcribe",
+      estimatedMinutes,
+    });
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith("quota_exceeded:")) {
+      return { ok: false, reason: "quota_transcribe", detail: err.message };
+    }
+    throw err;
+  }
 
   activeIngests.add(courseId);
   await sb.update("courses", `id=eq.${courseId}`, { ingest_status: "ingesting" });

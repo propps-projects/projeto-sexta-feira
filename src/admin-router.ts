@@ -324,6 +324,17 @@ async function coursesPost(tenant: Tenant, req: IncomingMessage, res: ServerResp
     return redirect(res, `${adminBase(tenant)}/courses?msg=missing_fields`);
   }
 
+  // Quota: max_courses on the tenant's plan
+  try {
+    const { enforceQuota } = await import("./lib/plans.ts");
+    await enforceQuota(tenant.id, tenant.planId, { kind: "add_course" });
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith("quota_exceeded:")) {
+      return redirect(res, `${adminBase(tenant)}/courses?msg=quota_courses`);
+    }
+    throw err;
+  }
+
   try {
     await sb.insert("courses", {
       tenant_id: tenant.id,
@@ -585,6 +596,17 @@ async function materialsUpload(
     return redirect(res, `${adminBase(tenant)}/courses/${courseSlug}?msg=material_kind_unsupported`);
   }
 
+  // Quota: KB total size
+  try {
+    const { enforceQuota } = await import("./lib/plans.ts");
+    await enforceQuota(tenant.id, tenant.planId, { kind: "upload_kb", bytes: file.buffer.length });
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith("quota_exceeded:")) {
+      return redirect(res, `${adminBase(tenant)}/courses/${courseSlug}?msg=quota_kb`);
+    }
+    throw err;
+  }
+
   try {
     const { ingestMaterial } = await import("./lib/ingest.ts");
     const result = await ingestMaterial(course.id, {
@@ -639,6 +661,37 @@ async function materialDelete(
     await sb.delete("materials", `id=eq.${materialId}&course_id=eq.${course.id}`);
   }
   redirect(res, `${adminBase(tenant)}/courses/${courseSlug}?msg=material_deleted`);
+}
+
+async function planPage(tenant: Tenant, req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const admin = await requireAdmin(tenant, req, res);
+  if (!admin) return;
+
+  const { getPlan, listPlans, getUsage } = await import("./lib/plans.ts");
+  const [current, allPlans] = await Promise.all([
+    getPlan(tenant.planId),
+    listPlans({ publicOnly: true }),
+  ]);
+  if (!current) {
+    return html(res, 500, layoutHtml({
+      title: "Plano",
+      tenantName: tenant.name,
+      tenantSlug: tenant.slug,
+      activeNav: "plan",
+      admin,
+      body: `<h1>Plano "${esc(tenant.planId)}" não encontrado</h1>`,
+    }));
+  }
+  const usage = await getUsage(tenant.id, current);
+
+  html(res, 200, layoutHtml({
+    title: "Plano e Uso",
+    tenantName: tenant.name,
+    tenantSlug: tenant.slug,
+    activeNav: "plan",
+    admin,
+    body: planPageHtml({ tenant, current, allPlans, usage }),
+  }));
 }
 
 async function startIngest(
@@ -734,6 +787,7 @@ function layoutHtml(args: {
       ${navItem("dashboard", "Dashboard", `/t/${slug}/admin`)}
       ${navItem("courses", "Cursos", `/t/${slug}/admin/courses`)}
       ${navItem("integrations", "Integrações", `/t/${slug}/admin/integrations`)}
+      ${navItem("plan", "Plano e Uso", `/t/${slug}/admin/plan`)}
     </nav>
     <div class="right">
       <span>${esc(args.admin.email)}</span>
@@ -943,6 +997,7 @@ function coursesHtml(args: {
     course_created: ["Curso criado. Status: pending.", "success"],
     missing_fields: ["Preencha nome e slug.", "error"],
     create_failed: ["Não foi possível criar (talvez slug duplicado).", "error"],
+    quota_courses: ["Limite de cursos do plano atingido. Veja a página Plano e Uso.", "error"],
   };
   const [msgText, msgKind] = args.message ? msgs[args.message] ?? [args.message, "error"] : ["", ""];
 
@@ -987,6 +1042,78 @@ ${msgText ? `<div class="msg ${msgKind}">${esc(msgText)}</div>` : ""}
 </div>`;
 }
 
+function planPageHtml(args: {
+  tenant: Tenant;
+  current: import("./lib/plans.ts").Plan;
+  allPlans: import("./lib/plans.ts").Plan[];
+  usage: import("./lib/plans.ts").Usage;
+}): string {
+  const fmtBytes = (n: number) => {
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+    if (n < 1024 * 1024 * 1024) return `${(n / 1024 / 1024).toFixed(1)} MB`;
+    return `${(n / 1024 / 1024 / 1024).toFixed(2)} GB`;
+  };
+  const fmtPriceBrl = (n: number | null) =>
+    n == null ? "Sob proposta" : `R$ ${n.toFixed(2).replace(".", ",")}`;
+  const limitLabel = (n: number | null, unit?: string) =>
+    n == null ? "∞" : `${n}${unit ? " " + unit : ""}`;
+
+  function gauge(label: string, used: number, limit: number | null, formatter: (n: number) => string): string {
+    const pct = limit && limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
+    const warn = pct >= 80;
+    const danger = pct >= 100;
+    const color = danger ? "#dc2626" : warn ? "#d97706" : "#059669";
+    return `
+      <div style="background:#fff;border:1px solid #e5e5e5;border-radius:12px;padding:16px">
+        <div style="font-size:12px;color:#666;text-transform:uppercase;letter-spacing:0.5px">${esc(label)}</div>
+        <div style="margin-top:6px;font-size:22px;font-weight:600">${esc(formatter(used))}<span style="font-size:13px;color:#999;font-weight:400"> / ${esc(limit == null ? "∞" : formatter(limit))}</span></div>
+        <div style="margin-top:10px;background:#eee;height:8px;border-radius:99px;overflow:hidden">
+          <div style="width:${pct.toFixed(1)}%;background:${color};height:100%"></div>
+        </div>
+        <div style="margin-top:6px;font-size:11px;color:#666">${pct.toFixed(0)}% usado</div>
+      </div>`;
+  }
+
+  return `
+<h1>Plano e Uso</h1>
+<div class="card">
+  <h3>Plano atual</h3>
+  <p style="font-size:24px;margin:8px 0"><strong>${esc(args.current.name)}</strong></p>
+  <p>${esc(fmtPriceBrl(args.current.monthlyPriceBrl))}/mês</p>
+</div>
+
+<h2>Uso este mês</h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:24px">
+  ${gauge("Cursos", args.usage.courses.used, args.usage.courses.limit, (n) => String(n))}
+  ${gauge("Transcrição (min)", args.usage.transcribeMinutesThisMonth.used, args.usage.transcribeMinutesThisMonth.limit, (n) => n.toFixed(1))}
+  ${gauge("Alunos ativos", args.usage.activeStudents.used, args.usage.activeStudents.limit, (n) => String(n))}
+  ${gauge("Base de conhecimento", args.usage.kbBytes.used, args.usage.kbBytes.limit, fmtBytes)}
+</div>
+
+<h2>Outros planos</h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px">
+  ${args.allPlans.map((p) => `
+    <div class="card" style="${p.id === args.current.id ? "border:2px solid #111;" : ""}margin:0">
+      <h3 style="margin-top:0">${esc(p.name)}${p.id === args.current.id ? " <span style=\"font-size:11px;color:#666;font-weight:400\">(atual)</span>" : ""}</h3>
+      <p style="font-size:20px;margin:8px 0"><strong>${esc(fmtPriceBrl(p.monthlyPriceBrl))}</strong>${p.monthlyPriceBrl != null ? "<span style=\"font-size:12px;color:#999\">/mês</span>" : ""}</p>
+      <ul class="help" style="padding-left:18px;margin-top:12px">
+        <li>${esc(limitLabel(p.maxCourses, "cursos"))}</li>
+        <li>${esc(limitLabel(p.transcribeHoursMonth, "h transcrição/mês"))}</li>
+        <li>${esc(limitLabel(p.activeStudentsMonth, "alunos ativos/mês"))}</li>
+        <li>${p.kbSizeBytes == null ? "∞ KB" : esc(fmtBytes(p.kbSizeBytes)) + " KB"}</li>
+      </ul>
+    </div>
+  `).join("")}
+</div>
+
+<div class="card" style="margin-top:24px">
+  <h3>Mudar de plano</h3>
+  <p class="help">Por enquanto, mudança de plano é via operador. Em breve: upgrade automático com cobrança ValidaPay.</p>
+  <p class="help">Manda email pra <a href="mailto:rafael@infosaas.co">rafael@infosaas.co</a> com o plano desejado.</p>
+</div>`;
+}
+
 function courseDetailHtml(args: {
   tenant: Tenant;
   course: ResolvedCourse;
@@ -1022,6 +1149,8 @@ function courseDetailHtml(args: {
     ingest_no_videos: ["O folder Panda não tem vídeos.", "error"],
     ingest_course_not_found: ["Curso não encontrado.", "error"],
     ingest_failed: ["Falha ao iniciar ingest. Veja os logs.", "error"],
+    ingest_quota_transcribe: ["Minutos de transcrição do mês ultrapassariam o plano. Veja Plano e Uso.", "error"],
+    quota_kb: ["Tamanho de KB do plano atingido. Veja Plano e Uso.", "error"],
   };
   const [msgText, msgKind] = args.message ? msgs[args.message] ?? [args.message, "error"] : ["", ""];
   const isIngesting = args.course.ingest_status === "ingesting"
@@ -1203,6 +1332,7 @@ export type AdminRouteMatch =
   | { type: "materials-upload"; courseSlug: string }
   | { type: "material-delete"; courseSlug: string }
   | { type: "start-ingest"; courseSlug: string }
+  | { type: "plan" }
   | { type: "logout" };
 
 export function matchAdminRoute(suffix: string, method: string): AdminRouteMatch | null {
@@ -1211,6 +1341,7 @@ export function matchAdminRoute(suffix: string, method: string): AdminRouteMatch
   if (method === "GET"  && path === "/login")    return { type: "login-get" };
   if (method === "POST" && path === "/login")    return { type: "login-post" };
   if (method === "GET"  && path === "/verify")   return { type: "verify" };
+  if (method === "GET"  && path === "/plan")    return { type: "plan" };
   if (method === "GET"  && path === "/integrations") return { type: "integrations-get" };
   if (method === "POST" && path === "/integrations/hotmart") return { type: "integrations-hotmart" };
   if (method === "POST" && path === "/integrations/panda")   return { type: "integrations-panda" };
@@ -1257,6 +1388,7 @@ export async function handleAdminRoute(
     case "materials-upload":    return materialsUpload(tenant, match.courseSlug, req, res);
     case "material-delete":     return materialDelete(tenant, match.courseSlug, req, res);
     case "start-ingest":        return startIngest(tenant, match.courseSlug, req, res);
+    case "plan":                return planPage(tenant, req, res);
     case "logout":              return logout(tenant, req, res);
   }
 }
