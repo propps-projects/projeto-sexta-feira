@@ -583,6 +583,95 @@ async function planPage(tenant: Tenant, req: IncomingMessage, res: ServerRespons
   }));
 }
 
+async function courseInsights(
+  tenant: Tenant,
+  courseSlug: string,
+  req: IncomingMessage,
+  res: ServerResponse,
+): Promise<void> {
+  const admin = await requireAdmin(tenant, req, res);
+  if (!admin) return;
+  const course = await resolveCourseBySlug(tenant.id, courseSlug);
+  if (!course) return redirect(res, `${adminBase(tenant)}/courses?msg=course_not_found`);
+
+  // 30-day window for counts; 7-day for sparkline / recency
+  const since30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const since7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  // Aggregate via PostgREST — limited to 1000 rows per call, fine for now.
+  const calls30 = await sb.select<{
+    tool_name: string; input: Record<string, unknown>; occurred_at: string;
+    student_id: string | null;
+  }>(
+    "tool_calls",
+    `course_id=eq.${course.id}&occurred_at=gte.${since30}&select=tool_name,input,occurred_at,student_id&order=occurred_at.desc&limit=1000`,
+  );
+
+  const queries30 = await sb.select<{ query: string; occurred_at: string }>(
+    "search_queries",
+    `course_id=eq.${course.id}&occurred_at=gte.${since30}&select=query,occurred_at&order=occurred_at.desc&limit=500`,
+  );
+
+  // Aggregate counts per tool
+  const byTool: Record<string, number> = {};
+  const callsLast7 = calls30.filter((c) => c.occurred_at >= since7).length;
+  const uniqStudents30 = new Set<string>();
+  for (const c of calls30) {
+    byTool[c.tool_name] = (byTool[c.tool_name] ?? 0) + 1;
+    if (c.student_id) uniqStudents30.add(c.student_id);
+  }
+
+  // Top lessons by play_lesson count (input.lessonNumber)
+  const lessonPlays: Record<string, number> = {};
+  for (const c of calls30) {
+    if (c.tool_name !== "play_lesson") continue;
+    const n = c.input?.lessonNumber;
+    if (n != null) lessonPlays[String(n)] = (lessonPlays[String(n)] ?? 0) + 1;
+  }
+  const topLessons = Object.entries(lessonPlays)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([num, count]) => ({ lessonNumber: Number(num), count }));
+
+  // Top raw queries — simple bucket by exact text. Embedding clustering
+  // is a future improvement (Phase 4.2).
+  const queryCounts: Record<string, number> = {};
+  for (const q of queries30) {
+    const key = q.query.toLowerCase().trim();
+    queryCounts[key] = (queryCounts[key] ?? 0) + 1;
+  }
+  const topQueries = Object.entries(queryCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 15)
+    .map(([q, count]) => ({ query: q, count }));
+
+  // Lesson titles for top lessons display
+  const lessonTitles = await sb.select<{ lesson_number: number | null; title: string }>(
+    "lessons",
+    `course_id=eq.${course.id}&select=lesson_number,title&order=lesson_number.asc.nullslast`,
+  );
+  const titleByNum = new Map(lessonTitles.filter((l) => l.lesson_number != null).map((l) => [l.lesson_number!, l.title]));
+
+  html(res, 200, layoutHtml({
+    title: `Insights — ${course.name}`,
+    tenantName: tenant.name,
+    tenantSlug: tenant.slug,
+    tenantStatus: tenant.status,
+    activeNav: "courses",
+    admin,
+    body: insightsHtml({
+      tenant, course,
+      totalCalls30: calls30.length,
+      callsLast7,
+      uniqueStudents: uniqStudents30.size,
+      totalQueries30: queries30.length,
+      byTool,
+      topLessons: topLessons.map((t) => ({ ...t, title: titleByNum.get(t.lessonNumber) ?? "(sem título)" })),
+      topQueries,
+    }),
+  }));
+}
+
 async function startIngest(
   tenant: Tenant,
   courseSlug: string,
@@ -951,6 +1040,111 @@ ${msgText ? `<div class="msg ${msgKind}">${esc(msgText)}</div>` : ""}
 </div>`;
 }
 
+function insightsHtml(args: {
+  tenant: Tenant;
+  course: ResolvedCourse;
+  totalCalls30: number;
+  callsLast7: number;
+  uniqueStudents: number;
+  totalQueries30: number;
+  byTool: Record<string, number>;
+  topLessons: Array<{ lessonNumber: number; title: string; count: number }>;
+  topQueries: Array<{ query: string; count: number }>;
+}): string {
+  const maxLessonCount = args.topLessons[0]?.count ?? 1;
+  const maxQueryCount = args.topQueries[0]?.count ?? 1;
+  const toolEntries = Object.entries(args.byTool).sort((a, b) => b[1] - a[1]);
+
+  return `
+<p><a href="/t/${esc(args.tenant.slug)}/admin/courses/${esc(args.course.slug)}">← ${esc(args.course.name)}</a></p>
+<h1>Insights — ${esc(args.course.name)}</h1>
+<p class="help">Análise dos últimos 30 dias. Atualizada em tempo real.</p>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:24px">
+  <div class="card" style="margin:0">
+    <div style="font-size:11px;color:#666;text-transform:uppercase;letter-spacing:0.5px">Tool calls (30d)</div>
+    <div style="font-size:28px;font-weight:600;margin-top:4px">${args.totalCalls30}</div>
+    <div style="font-size:11px;color:#999">${args.callsLast7} nos últimos 7 dias</div>
+  </div>
+  <div class="card" style="margin:0">
+    <div style="font-size:11px;color:#666;text-transform:uppercase;letter-spacing:0.5px">Alunos ativos (30d)</div>
+    <div style="font-size:28px;font-weight:600;margin-top:4px">${args.uniqueStudents}</div>
+    <div style="font-size:11px;color:#999">com pelo menos 1 chamada</div>
+  </div>
+  <div class="card" style="margin:0">
+    <div style="font-size:11px;color:#666;text-transform:uppercase;letter-spacing:0.5px">Perguntas únicas</div>
+    <div style="font-size:28px;font-weight:600;margin-top:4px">${args.totalQueries30}</div>
+    <div style="font-size:11px;color:#999">via search_course</div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Uso por ferramenta</h2>
+  ${toolEntries.length === 0
+    ? "<p class=help>Sem chamadas ainda. Quando alunos usarem o tutor, os dados aparecem aqui.</p>"
+    : `
+    <table>
+      <thead><tr><th>Tool</th><th>Chamadas</th><th></th></tr></thead>
+      <tbody>
+        ${toolEntries.map(([name, count]) => {
+          const pct = ((count / args.totalCalls30) * 100).toFixed(0);
+          return `<tr>
+            <td><code>${esc(name)}</code></td>
+            <td style="font-weight:600">${count}</td>
+            <td style="width:50%"><div style="background:#eee;border-radius:4px;height:8px"><div style="background:#3b82f6;height:100%;width:${pct}%;border-radius:4px"></div></div></td>
+          </tr>`;
+        }).join("")}
+      </tbody>
+    </table>
+  `}
+</div>
+
+<div class="card">
+  <h2>Aulas mais reproduzidas</h2>
+  <p class="help">Quais aulas o tutor manda exibir mais frequentemente.</p>
+  ${args.topLessons.length === 0
+    ? "<p class=help>Nenhuma reprodução de aula ainda.</p>"
+    : `
+    <table>
+      <thead><tr><th>#</th><th>Aula</th><th>Reproduções</th><th></th></tr></thead>
+      <tbody>
+        ${args.topLessons.map((l) => {
+          const pct = (l.count / maxLessonCount) * 100;
+          return `<tr>
+            <td>${l.lessonNumber}</td>
+            <td>${esc(l.title)}</td>
+            <td style="font-weight:600">${l.count}</td>
+            <td style="width:40%"><div style="background:#eee;border-radius:4px;height:8px"><div style="background:#10b981;height:100%;width:${pct.toFixed(0)}%;border-radius:4px"></div></div></td>
+          </tr>`;
+        }).join("")}
+      </tbody>
+    </table>
+  `}
+</div>
+
+<div class="card">
+  <h2>Top perguntas dos alunos</h2>
+  <p class="help">Use isso pra entender o que tá faltando explicar no teu curso, ou pra criar conteúdo de FAQ.</p>
+  ${args.topQueries.length === 0
+    ? "<p class=help>Nenhuma pergunta ainda.</p>"
+    : `
+    <table>
+      <thead><tr><th>Pergunta</th><th>Vezes</th><th></th></tr></thead>
+      <tbody>
+        ${args.topQueries.map((q) => {
+          const pct = (q.count / maxQueryCount) * 100;
+          return `<tr>
+            <td style="max-width:600px">${esc(q.query)}</td>
+            <td style="font-weight:600">${q.count}</td>
+            <td style="width:30%"><div style="background:#eee;border-radius:4px;height:8px"><div style="background:#8b5cf6;height:100%;width:${pct.toFixed(0)}%;border-radius:4px"></div></div></td>
+          </tr>`;
+        }).join("")}
+      </tbody>
+    </table>
+  `}
+</div>`;
+}
+
 function planPageHtml(args: {
   tenant: Tenant;
   current: import("./lib/plans.ts").Plan;
@@ -1082,7 +1276,11 @@ function courseDetailHtml(args: {
   const totalCostUsd = args.lessons.reduce((sum, l) => sum + (l.transcription_cost_usd ?? 0), 0);
 
   return `${refreshMeta}
-<p><a href="/t/${esc(args.tenant.slug)}/admin/courses">← Voltar aos cursos</a></p>
+<p>
+  <a href="/t/${esc(args.tenant.slug)}/admin/courses">← Voltar aos cursos</a>
+  &nbsp;·&nbsp;
+  <a href="/t/${esc(args.tenant.slug)}/admin/courses/${esc(args.course.slug)}/insights">📊 Insights →</a>
+</p>
 <h1>${esc(args.course.name)}</h1>
 <p>
   <code>${esc(args.course.slug)}</code>
@@ -1213,6 +1411,7 @@ export type AdminRouteMatch =
   | { type: "materials-upload"; courseSlug: string }
   | { type: "material-delete"; courseSlug: string }
   | { type: "start-ingest"; courseSlug: string }
+  | { type: "course-insights"; courseSlug: string }
   | { type: "plan" }
   | { type: "logout" };
 
@@ -1242,6 +1441,7 @@ export function matchAdminRoute(suffix: string, method: string): AdminRouteMatch
     if (method === "POST" && tail === "/materials")         return { type: "materials-upload", courseSlug };
     if (method === "POST" && tail === "/materials/delete")  return { type: "material-delete", courseSlug };
     if (method === "POST" && tail === "/ingest")            return { type: "start-ingest", courseSlug };
+    if (method === "GET"  && tail === "/insights")          return { type: "course-insights", courseSlug };
   }
   return null;
 }
@@ -1269,6 +1469,7 @@ export async function handleAdminRoute(
     case "materials-upload":    return materialsUpload(tenant, match.courseSlug, req, res);
     case "material-delete":     return materialDelete(tenant, match.courseSlug, req, res);
     case "start-ingest":        return startIngest(tenant, match.courseSlug, req, res);
+    case "course-insights":     return courseInsights(tenant, match.courseSlug, req, res);
     case "plan":                return planPage(tenant, req, res);
     case "logout":              return logout(tenant, req, res);
   }

@@ -12,6 +12,7 @@ import { type Tenant } from "./lib/tenant.ts";
 import { resolveCourse, type Course } from "./lib/courses.ts";
 import { listLessonsForCourse, findLessonInCourse, excerptFromTranscript } from "./lib/lessons-pg.ts";
 import { searchChunksForCourse } from "./lib/store-pg.ts";
+import { recordToolCall, recordSearchQuery } from "./lib/analytics.ts";
 
 // ChatGPT Apps SDK widget URI for the lesson player. Registered as an MCP
 // resource on /mcp-gpt; referenced from play_lesson's `openai/outputTemplate`.
@@ -231,6 +232,27 @@ export function buildServer(
     .optional()
     .describe("Slug do curso (omita se o tenant tem apenas 1 curso ativo)");
 
+  // Telemetry helper — fires only for tenant sessions (skips legacy MVP).
+  // All inserts are async fire-and-forget; never blocks the tool response.
+  function logTool(args: {
+    toolName: string;
+    input: Record<string, unknown>;
+    courseId: string | null;
+    output?: Record<string, unknown> | null;
+    latencyMs: number;
+  }): void {
+    if (!tenant) return;
+    recordToolCall({
+      tenantId: tenant.id,
+      studentId: auth.studentId,
+      courseId: args.courseId,
+      toolName: args.toolName,
+      input: args.input,
+      outputSummary: args.output ?? null,
+      latencyMs: args.latencyMs,
+    });
+  }
+
   server.registerTool(
     "list_lessons",
     {
@@ -250,6 +272,7 @@ export function buildServer(
       annotations: readOnlyAnnotations,
     },
     async ({ courseSlug }) => {
+      const t0 = Date.now();
       const ctx = await resolveCourseCtx(courseSlug);
       if (ctx.mode === "error") {
         return { isError: true, content: [{ type: "text", text: ctx.message }] };
@@ -284,6 +307,13 @@ export function buildServer(
       const text =
         `# ${courseName} (${lessons.length} aulas, ${formatDuration(total)} total)\n\n` +
         lines.join("\n");
+      logTool({
+        toolName: "list_lessons",
+        input: { courseSlug },
+        courseId: ctx.mode === "tenant" ? ctx.course.id : null,
+        output: { count: lessons.length, totalDurationSec: total },
+        latencyMs: Date.now() - t0,
+      });
       return {
         content: [{ type: "text", text }],
         structuredContent: { courseName, lessons, totalDurationSec: total },
@@ -313,6 +343,7 @@ export function buildServer(
       annotations: readOnlyAnnotations,
     },
     async ({ courseSlug, lessonNumber, lessonId, includeFullTranscript }) => {
+      const t0 = Date.now();
       const ctx = await resolveCourseCtx(courseSlug);
       if (ctx.mode === "error") {
         return { isError: true, content: [{ type: "text", text: ctx.message }] };
@@ -369,6 +400,13 @@ export function buildServer(
         transcriptAvailable: !!lesson.segments,
         ...(lesson.segments && includeFullTranscript ? { segments: lesson.segments } : {}),
       };
+      logTool({
+        toolName: "get_lesson",
+        input: { courseSlug, lessonNumber, lessonId, includeFullTranscript },
+        courseId: ctx.mode === "tenant" ? ctx.course.id : null,
+        output: { lessonNumber: lesson.lessonNumber, transcriptAvailable: !!lesson.segments },
+        latencyMs: Date.now() - t0,
+      });
       return { content: [{ type: "text", text: body }], structuredContent };
     },
   );
@@ -398,6 +436,7 @@ export function buildServer(
       annotations: readOnlyAnnotations,
     },
     async ({ courseSlug, query, limit, lessonNumber }) => {
+      const t0 = Date.now();
       const ctx = await resolveCourseCtx(courseSlug);
       if (ctx.mode === "error") {
         return { isError: true, content: [{ type: "text", text: ctx.message }] };
@@ -452,6 +491,31 @@ export function buildServer(
         return `### ${i + 1}. Aula ${h.lessonNumber ?? "?"} — ${h.lessonTitle}${range}\n\n> ${h.text}${playHint}`;
       });
       const text = `# ${hits.length} trecho(s) encontrado(s) para: "${query}"\n\n` + blocks.join("\n\n");
+      // Telemetry: record the tool call + (for tenant mode) the embedded
+      // query so the admin can cluster top topics. result_lesson_ids comes
+      // from the matched chunks' lesson IDs (unique-flatten).
+      if (tenant && ctx.mode === "tenant") {
+        const lessonIds = Array.from(new Set(hits.map((h) => h.lessonNumber).filter((n): n is number => n != null).map(String)));
+        recordSearchQuery({
+          tenantId: tenant.id,
+          courseId: ctx.course.id,
+          studentId: auth.studentId,
+          query,
+          queryEmbedding: qv,
+          // result_lesson_ids in schema is UUID[]; we don't have the UUIDs here
+          // from search results (we have lesson_number), so empty for now —
+          // future improvement: have searchChunksForCourse return lesson UUIDs.
+          resultLessonIds: [],
+        });
+        void lessonIds;
+      }
+      logTool({
+        toolName: "search_course",
+        input: { courseSlug, query, limit, lessonNumber },
+        courseId: ctx.mode === "tenant" ? ctx.course.id : null,
+        output: { hitCount: hits.length },
+        latencyMs: Date.now() - t0,
+      });
       return { content: [{ type: "text", text }], structuredContent: { query, hits } };
     },
   );
@@ -497,6 +561,7 @@ export function buildServer(
       },
     },
     async ({ courseSlug, lessonNumber, lessonId, startSec }) => {
+      const t0 = Date.now();
       const ctx = await resolveCourseCtx(courseSlug);
       if (ctx.mode === "error") {
         return { isError: true, content: [{ type: "text", text: ctx.message }] };
@@ -545,6 +610,13 @@ export function buildServer(
 
       // No embedded resource — both hosts render the widget via the URI
       // declared on the tool _meta. Tool result carries only text + data.
+      logTool({
+        toolName: "play_lesson",
+        input: { courseSlug, lessonNumber, lessonId, startSec },
+        courseId: ctx.mode === "tenant" ? ctx.course.id : null,
+        output: { lessonNumber: lesson.lessonNumber, startSec: startSec ?? 0 },
+        latencyMs: Date.now() - t0,
+      });
       return {
         content: [{ type: "text", text: label }],
         structuredContent,
@@ -580,6 +652,7 @@ export function buildServer(
       annotations: readOnlyAnnotations,
     },
     async ({ courseSlug, lessonNumber, lessonId, startSec, endSec }) => {
+      const t0 = Date.now();
       const ctx = await resolveCourseCtx(courseSlug);
       if (ctx.mode === "error") {
         return { isError: true, content: [{ type: "text", text: ctx.message }] };
@@ -613,6 +686,13 @@ export function buildServer(
       const body =
         `# Aula ${lesson.lessonNumber} — ${lesson.title}\n## ${formatTimestamp(startSec)} → ${formatTimestamp(endSec)}\n\n` +
         segs.map((s) => `[${formatTimestamp(s.start)}] ${s.text}`).join("\n");
+      logTool({
+        toolName: "excerpt_transcript",
+        input: { courseSlug, lessonNumber, lessonId, startSec, endSec },
+        courseId: ctx.mode === "tenant" ? ctx.course.id : null,
+        output: { segmentCount: segs.length },
+        latencyMs: Date.now() - t0,
+      });
       return { content: [{ type: "text", text: body }], structuredContent };
     },
   );
@@ -636,11 +716,18 @@ export function buildServer(
         annotations: readOnlyAnnotations,
       },
       async () => {
+        const t0 = Date.now();
         const { listCoursesForTenant } = await import("./lib/courses.ts");
         const all = await listCoursesForTenant(tenant.id);
-        // Show only courses the student actually has access to.
         const accessible = new Set(auth.accessibleCourseIds ?? []);
         const courses = all.filter((c) => accessible.has(c.id));
+        logTool({
+          toolName: "list_courses",
+          input: {},
+          courseId: null,
+          output: { count: courses.length },
+          latencyMs: Date.now() - t0,
+        });
         if (!courses.length) {
           return {
             content: [{ type: "text", text: "Você ainda não tem acesso a nenhum curso deste tenant." }],
