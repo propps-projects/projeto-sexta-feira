@@ -1,4 +1,4 @@
-import { sql } from "./db.ts";
+import { sb } from "./db-api.ts";
 
 export interface Segment {
   start: number;
@@ -32,6 +32,9 @@ interface LessonRow {
   transcript: { language: string; segments: Segment[] } | null;
 }
 
+const LESSON_COLS =
+  "id,course_id,source_video_id,lesson_number,title,duration_sec,hls_url,embed_url,thumbnail_url,transcript";
+
 function mapLesson(r: LessonRow): LessonPg {
   return {
     id: r.id,
@@ -48,13 +51,10 @@ function mapLesson(r: LessonRow): LessonPg {
 }
 
 export async function listLessonsForCourse(courseId: string): Promise<LessonPg[]> {
-  const rows = await sql()<LessonRow[]>`
-    SELECT id, course_id, source_video_id, lesson_number, title, duration_sec,
-           hls_url, embed_url, thumbnail_url, transcript
-    FROM lessons
-    WHERE course_id = ${courseId}
-    ORDER BY lesson_number ASC NULLS LAST
-  `;
+  const rows = await sb.select<LessonRow>(
+    "lessons",
+    `course_id=eq.${courseId}&order=lesson_number.asc.nullslast&select=${LESSON_COLS}`,
+  );
   return rows.map(mapLesson);
 }
 
@@ -62,27 +62,15 @@ export async function findLessonInCourse(
   courseId: string,
   ref: { lessonNumber?: number; lessonId?: string },
 ): Promise<LessonPg | null> {
+  let query: string | null = null;
   if (ref.lessonId) {
-    const rows = await sql()<LessonRow[]>`
-      SELECT id, course_id, source_video_id, lesson_number, title, duration_sec,
-             hls_url, embed_url, thumbnail_url, transcript
-      FROM lessons
-      WHERE course_id = ${courseId} AND id = ${ref.lessonId}
-      LIMIT 1
-    `;
-    return rows[0] ? mapLesson(rows[0]) : null;
+    query = `course_id=eq.${courseId}&id=eq.${ref.lessonId}&limit=1&select=${LESSON_COLS}`;
+  } else if (ref.lessonNumber !== undefined) {
+    query = `course_id=eq.${courseId}&lesson_number=eq.${ref.lessonNumber}&limit=1&select=${LESSON_COLS}`;
   }
-  if (ref.lessonNumber !== undefined) {
-    const rows = await sql()<LessonRow[]>`
-      SELECT id, course_id, source_video_id, lesson_number, title, duration_sec,
-             hls_url, embed_url, thumbnail_url, transcript
-      FROM lessons
-      WHERE course_id = ${courseId} AND lesson_number = ${ref.lessonNumber}
-      LIMIT 1
-    `;
-    return rows[0] ? mapLesson(rows[0]) : null;
-  }
-  return null;
+  if (!query) return null;
+  const row = await sb.selectOne<LessonRow>("lessons", query);
+  return row ? mapLesson(row) : null;
 }
 
 /**

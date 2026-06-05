@@ -1,4 +1,4 @@
-import { sql } from "./db.ts";
+import { sb } from "./db-api.ts";
 
 export interface Course {
   id: string;
@@ -33,12 +33,10 @@ function mapCourse(r: CourseRow): Course {
  * All ingest-ready courses for a tenant, oldest first.
  */
 export async function listCoursesForTenant(tenantId: string): Promise<Course[]> {
-  const rows = await sql()<CourseRow[]>`
-    SELECT id, tenant_id, name, slug, source_type, ingest_status
-    FROM courses
-    WHERE tenant_id = ${tenantId} AND ingest_status = 'ready'
-    ORDER BY created_at ASC
-  `;
+  const rows = await sb.select<CourseRow>(
+    "courses",
+    `tenant_id=eq.${tenantId}&ingest_status=eq.ready&order=created_at.asc&select=id,tenant_id,name,slug,source_type,ingest_status`,
+  );
   return rows.map(mapCourse);
 }
 

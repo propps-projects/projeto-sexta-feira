@@ -9,3 +9,4 @@ data/vectors.db-shm
 .DS_Store
 *.log
 .claude/
+.mcp.json

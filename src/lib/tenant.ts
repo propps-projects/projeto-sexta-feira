@@ -1,4 +1,4 @@
-import { sql } from "./db.ts";
+import { sb } from "./db-api.ts";
 
 /**
  * Tenant record as resolved by URL slug. Includes only the fields the
@@ -30,21 +30,18 @@ export async function resolveTenantBySlug(slug: string): Promise<Tenant | null> 
   const cached = cache.get(slug);
   if (cached && cached.expires > Date.now()) return cached.tenant;
 
-  const rows = await sql()<{
+  const row = await sb.selectOne<{
     id: string;
     slug: string;
     name: string;
     status: string;
     plan_id: string;
     panda_api_key_enc: string | null;
-  }[]>`
-    SELECT id, slug, name, status, plan_id, panda_api_key_enc
-    FROM tenants
-    WHERE slug = ${slug}
-    LIMIT 1
-  `;
-  if (!rows.length) return null;
-  const row = rows[0];
+  }>(
+    "tenants",
+    `slug=eq.${encodeURIComponent(slug)}&select=id,slug,name,status,plan_id,panda_api_key_enc`,
+  );
+  if (!row) return null;
   if (row.status === "suspended" || row.status === "canceled") return null;
 
   const tenant: Tenant = {

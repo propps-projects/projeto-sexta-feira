@@ -27,13 +27,22 @@ const PLAYER_WIDGET_URI = "ui://widget/lesson-player.html";
  *   - "appsSdk"  → MIME `text/html+skybridge`      (ChatGPT Apps SDK)
  *
  * `tenant` is the resolved tenant for path-based routing (/t/:slug/mcp).
- * Null = legacy single-tenant mode (current MVP behavior). Tool handlers
- * keep reading from local files until Sub-phase 0.3 migrates the data
- * layer to Postgres.
+ * Null = legacy single-tenant mode (local files, no enforcement).
+ *
+ * `auth` carries OAuth claims for tenant sessions: which student is logged
+ * in and which courses they have active access to. The course resolution
+ * helper enforces that resolved courses must be in accessibleCourseIds.
+ * Legacy sessions pass null and skip the check.
  */
+export interface AuthCtx {
+  studentId: string | null;
+  accessibleCourseIds: string[] | null;
+}
+
 export function buildServer(
   adapterMode: AdapterMode = "mcpApps",
   tenant: Tenant | null = null,
+  auth: AuthCtx = { studentId: null, accessibleCourseIds: null },
 ): McpServer {
   const server = new McpServer(
     {
@@ -161,8 +170,8 @@ export function buildServer(
   //
   // Single-tenant (legacy /mcp) keeps reading the local VMA Produtificação
   // course from data/lessons.json. Multi-tenant (/t/:slug/mcp) queries the
-  // tenant's ready courses; with one course returns it implicitly, with
-  // many returns an error pointing at list_courses.
+  // tenant's ready courses, filters to ones the student has access to, and
+  // resolves implicitly when there's exactly one.
   // ---------------------------------------------------------------------------
   type CourseCtx =
     | { mode: "legacy" }
@@ -171,14 +180,36 @@ export function buildServer(
 
   async function resolveCourseCtx(courseSlug?: string): Promise<CourseCtx> {
     if (!tenant) return { mode: "legacy" };
+
+    // Tenant mode requires an authenticated student with access claims.
+    // Without claims (e.g. session not yet through OAuth), bail.
+    if (!auth.studentId || auth.accessibleCourseIds === null) {
+      return { mode: "error", message: "Sessão sem autenticação válida. Faça login novamente." };
+    }
+    const accessible = new Set(auth.accessibleCourseIds);
+
     const r = await resolveCourse(tenant.id, courseSlug);
-    if (r.ok) return { mode: "tenant", course: r.course };
+    if (r.ok) {
+      if (!accessible.has(r.course.id)) {
+        return {
+          mode: "error",
+          message: `Você não tem acesso ao curso "${r.course.slug}". Caso tenha comprado recentemente, aguarde alguns minutos para o acesso ser liberado.`,
+        };
+      }
+      return { mode: "tenant", course: r.course };
+    }
     if (r.reason === "ambiguous") {
-      const list = r.available.map((c) => `  - ${c.slug}: ${c.name}`).join("\n");
+      // Filter to courses the student can access — disambiguate from the
+      // student's perspective, not the tenant's full catalog.
+      const owned = r.available.filter((c) => accessible.has(c.id));
+      if (owned.length === 1) return { mode: "tenant", course: owned[0] };
+      if (owned.length === 0) {
+        return { mode: "error", message: "Você não tem acesso a nenhum curso deste tenant ainda." };
+      }
+      const list = owned.map((c) => `  - ${c.slug}: ${c.name}`).join("\n");
       return {
         mode: "error",
-        message:
-          `Há mais de um curso ativo neste tenant. Forneça \`courseSlug\` em algum dos seguintes:\n${list}`,
+        message: `Há mais de um curso disponível. Forneça \`courseSlug\` em algum dos seguintes:\n${list}`,
       };
     }
     if (r.available.length === 0) {
@@ -189,7 +220,7 @@ export function buildServer(
     }
     return {
       mode: "error",
-      message: `Curso "${courseSlug}" não encontrado. Disponíveis: ${r.available.map((c) => c.slug).join(", ")}.`,
+      message: `Curso "${courseSlug}" não encontrado.`,
     };
   }
 
@@ -605,16 +636,18 @@ export function buildServer(
         annotations: readOnlyAnnotations,
       },
       async () => {
-        // Re-import to avoid a circular shape — listCoursesForTenant is the source.
         const { listCoursesForTenant } = await import("./lib/courses.ts");
-        const courses = await listCoursesForTenant(tenant.id);
+        const all = await listCoursesForTenant(tenant.id);
+        // Show only courses the student actually has access to.
+        const accessible = new Set(auth.accessibleCourseIds ?? []);
+        const courses = all.filter((c) => accessible.has(c.id));
         if (!courses.length) {
           return {
-            content: [{ type: "text", text: "Nenhum curso ativo neste tenant." }],
+            content: [{ type: "text", text: "Você ainda não tem acesso a nenhum curso deste tenant." }],
             structuredContent: { courses: [] },
           };
         }
-        const text = `# Cursos disponíveis (${courses.length})\n\n` +
+        const text = `# Seus cursos (${courses.length})\n\n` +
           courses.map((c, i) => `${i + 1}. **${c.name}** \`(slug: ${c.slug})\``).join("\n");
         return {
           content: [{ type: "text", text }],

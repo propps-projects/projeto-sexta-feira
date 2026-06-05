@@ -16,7 +16,9 @@
     "db:check": "tsx scripts/check-supabase.ts",
     "tenant:create": "tsx scripts/cli/create-tenant.ts",
     "import:vma": "tsx scripts/cli/import-mvp-data.ts",
-    "import:vma:api": "tsx scripts/cli/import-mvp-data-api.ts"
+    "import:vma:api": "tsx scripts/cli/import-mvp-data-api.ts",
+    "hotmart:link": "tsx scripts/cli/link-hotmart-product.ts",
+    "oauth:register": "tsx scripts/cli/register-oauth-client.ts"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.0.0",

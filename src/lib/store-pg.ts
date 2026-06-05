@@ -1,4 +1,4 @@
-import { sql, vectorParam } from "./db.ts";
+import { sb } from "./db-api.ts";
 
 export interface SearchHitPg {
   chunkId: number;
@@ -32,7 +32,9 @@ interface SearchRow {
 
 /**
  * Cosine-similarity search over chunks scoped to a single course.
- * Uses pgvector's `<=>` operator backed by the HNSW index from migration 001.
+ * Calls the `search_chunks_in_course` RPC (migration 002), which wraps the
+ * pgvector `<=>` operator backed by the HNSW index. RPC is required because
+ * PostgREST doesn't accept the `<=>` operator in URL-style filters.
  *
  * The optional `lessonNumber` filter narrows to chunks within a specific lesson —
  * useful when the agent already knows which lesson to dig into.
@@ -42,59 +44,13 @@ export async function searchChunksForCourse(
   queryEmbedding: Float32Array,
   opts: { limit?: number; lessonNumber?: number } = {},
 ): Promise<SearchHitPg[]> {
-  const limit = opts.limit ?? 5;
-  const vec = vectorParam(queryEmbedding);
-
-  // Two query shapes — the `lesson_number` filter requires the join to lessons
-  // to be present in the WHERE clause. Postgres prepared statements differ, so
-  // we branch explicitly rather than building dynamic SQL.
-  if (opts.lessonNumber !== undefined) {
-    const rows = await sql()<SearchRow[]>`
-      SELECT
-        c.id            AS chunk_id,
-        c.course_id     AS course_id,
-        c.lesson_id     AS lesson_id,
-        c.material_id   AS material_id,
-        c.source_type   AS source_type,
-        l.lesson_number AS lesson_number,
-        l.title         AS lesson_title,
-        m.name          AS material_name,
-        c.start_sec     AS start_sec,
-        c.end_sec       AS end_sec,
-        c.text          AS text,
-        (c.embedding <=> ${vec}::vector) AS distance
-      FROM chunks c
-      LEFT JOIN lessons   l ON l.id = c.lesson_id
-      LEFT JOIN materials m ON m.id = c.material_id
-      WHERE c.course_id = ${courseId}
-        AND l.lesson_number = ${opts.lessonNumber}
-      ORDER BY c.embedding <=> ${vec}::vector
-      LIMIT ${limit}
-    `;
-    return rows.map(mapHit);
-  }
-
-  const rows = await sql()<SearchRow[]>`
-    SELECT
-      c.id            AS chunk_id,
-      c.course_id     AS course_id,
-      c.lesson_id     AS lesson_id,
-      c.material_id   AS material_id,
-      c.source_type   AS source_type,
-      l.lesson_number AS lesson_number,
-      l.title         AS lesson_title,
-      m.name          AS material_name,
-      c.start_sec     AS start_sec,
-      c.end_sec       AS end_sec,
-      c.text          AS text,
-      (c.embedding <=> ${vec}::vector) AS distance
-    FROM chunks c
-    LEFT JOIN lessons   l ON l.id = c.lesson_id
-    LEFT JOIN materials m ON m.id = c.material_id
-    WHERE c.course_id = ${courseId}
-    ORDER BY c.embedding <=> ${vec}::vector
-    LIMIT ${limit}
-  `;
+  const vec = `[${Array.from(queryEmbedding).join(",")}]`;
+  const rows = await sb.rpc<SearchRow[]>("search_chunks_in_course", {
+    p_course_id: courseId,
+    p_query_embedding: vec,
+    p_limit: opts.limit ?? 5,
+    p_lesson_number: opts.lessonNumber ?? null,
+  });
   return rows.map(mapHit);
 }
 
