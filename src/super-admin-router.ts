@@ -218,6 +218,40 @@ interface PlanRowFull {
   kb_size_bytes: string | number | null;
   is_public: boolean;
   display_order: number;
+  validapay_product_id: string | null;
+  validapay_price_id: string | null;
+}
+
+async function planSyncToValidapay(id: string, req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const sess = await requireSuperAdmin(req, res);
+  if (!sess) return;
+  const plan = await sb.selectOne<PlanRowFull>(
+    "plans",
+    `id=eq.${encodeURIComponent(id)}&select=*`,
+  );
+  if (!plan) return redirect(res, `${publicUrl()}/super-admin/plans?msg=plan_not_found`);
+  if (plan.monthly_price_brl == null) {
+    return redirect(res, `${publicUrl()}/super-admin/plans?msg=sync_needs_price`);
+  }
+  try {
+    const { createProductWithMonthlyPrice } = await import("./lib/validapay.ts");
+    const product = await createProductWithMonthlyPrice({
+      name: plan.name,
+      description: `Askine ${plan.name}`,
+      statementDescriptor: `ASKINE ${plan.id.toUpperCase()}`.slice(0, 22),
+      amountBrl: Number(plan.monthly_price_brl),
+      externalId: plan.id,
+    });
+    const priceId = product.prices[0]?.priceId ?? null;
+    await sb.update("plans", `id=eq.${encodeURIComponent(id)}`, {
+      validapay_product_id: product.productId,
+      validapay_price_id: priceId,
+    });
+    redirect(res, `${publicUrl()}/super-admin/plans?msg=sync_ok`);
+  } catch (err) {
+    console.error("ValidaPay sync failed:", err);
+    redirect(res, `${publicUrl()}/super-admin/plans?msg=sync_failed`);
+  }
 }
 
 async function planUpdate(id: string, req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -424,17 +458,26 @@ ${msgText ? `<div class="msg ${msgKind}">${esc(msgText)}</div>` : ""}
 }
 
 function plansHtml(args: { plans: PlanRowFull[]; message?: string }): string {
-  const [msgText, msgKind]: [string, "success" | "error"] = args.message === "plan_saved"
-    ? ["Plano atualizado.", "success"]
-    : ["", "error"];
+  const msgs: Record<string, [string, "success" | "error"]> = {
+    plan_saved:     ["Plano atualizado.", "success"],
+    sync_ok:        ["Plano sincronizado com ValidaPay.", "success"],
+    sync_failed:    ["Falha ao sincronizar com ValidaPay. Veja logs.", "error"],
+    sync_needs_price: ["Configure o preço BRL primeiro.", "error"],
+    plan_not_found: ["Plano não encontrado.", "error"],
+  };
+  const [msgText, msgKind] = args.message ? msgs[args.message] ?? [args.message, "error"] : ["", ""];
   return `
 <h1>Plans</h1>
 ${msgText ? `<div class="msg ${msgKind}">${esc(msgText)}</div>` : ""}
-<p style="color:#94a3b8;font-size:13px">Edite preços e limites. Mudança fica ativa imediatamente — todos os tenants no plano herdam.</p>
+<p style="color:#94a3b8;font-size:13px">Edite preços e limites. Mudança fica ativa imediatamente. <strong>"Sync ValidaPay"</strong> cria o product+price no ValidaPay (sandbox/prod conforme env) e salva os IDs.</p>
 
 ${args.plans.map((p) => `
 <div class="card">
-  <h2>${esc(p.name)} <code>${esc(p.id)}</code></h2>
+  <h2>${esc(p.name)} <code>${esc(p.id)}</code>
+    ${p.validapay_price_id
+      ? `<span style="font-size:11px;color:#34d399">● ValidaPay synced (price ${esc(p.validapay_price_id)})</span>`
+      : `<span style="font-size:11px;color:#fbbf24">○ não sincronizado</span>`}
+  </h2>
   <form method="POST" action="/super-admin/plans/${esc(p.id)}" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
     <div><label>Nome</label><input name="name" value="${esc(p.name)}"></div>
     <div><label>Preço BRL/mês</label><input name="monthly_price_brl" type="number" step="0.01" value="${p.monthly_price_brl ?? ""}"></div>
@@ -444,7 +487,14 @@ ${args.plans.map((p) => `
     <div><label>KB bytes</label><input name="kb_size_bytes" type="number" value="${p.kb_size_bytes ?? ""}" placeholder="∞"></div>
     <div><label>Ordem display</label><input name="display_order" type="number" value="${p.display_order}"></div>
     <div><label>Público?</label><select name="is_public"><option value="true"${p.is_public ? " selected" : ""}>Sim</option><option value="false"${!p.is_public ? " selected" : ""}>Não</option></select></div>
-    <div style="grid-column:1/-1;text-align:right"><button type="submit">Salvar ${esc(p.name)}</button></div>
+    <div style="grid-column:1/-1;display:flex;gap:8px;justify-content:flex-end">
+      <button type="submit">Salvar ${esc(p.name)}</button>
+    </div>
+  </form>
+  <form method="POST" action="/super-admin/plans/${esc(p.id)}/sync-validapay" style="margin-top:8px;text-align:right">
+    <button type="submit" class="secondary" ${p.monthly_price_brl == null ? "disabled" : ""}>
+      ${p.validapay_price_id ? "Re-sync" : "Sync"} ValidaPay
+    </button>
   </form>
 </div>
 `).join("")}`;
@@ -460,6 +510,7 @@ export type SuperAdminRouteMatch =
   | { type: "tenant-status"; slug: string }
   | { type: "plans-list" }
   | { type: "plan-update"; id: string }
+  | { type: "plan-sync"; id: string }
   | { type: "logout" };
 
 export function matchSuperAdminRoute(suffix: string, method: string): SuperAdminRouteMatch | null {
@@ -475,6 +526,8 @@ export function matchSuperAdminRoute(suffix: string, method: string): SuperAdmin
   if (method === "POST" && tenantPlan) return { type: "tenant-plan", slug: tenantPlan[1] };
   const tenantStatus = path.match(/^\/tenants\/([a-z0-9][a-z0-9-]{0,62})\/status$/i);
   if (method === "POST" && tenantStatus) return { type: "tenant-status", slug: tenantStatus[1] };
+  const planSync = path.match(/^\/plans\/([a-z0-9_-]+)\/sync-validapay$/i);
+  if (method === "POST" && planSync) return { type: "plan-sync", id: planSync[1] };
   const planUp = path.match(/^\/plans\/([a-z0-9_-]+)$/i);
   if (method === "POST" && planUp) return { type: "plan-update", id: planUp[1] };
   return null;
@@ -495,6 +548,7 @@ export async function handleSuperAdminRoute(
     case "tenant-status":  return tenantStatusPost(match.slug, req, res);
     case "plans-list":     return plansList(req, res);
     case "plan-update":    return planUpdate(match.id, req, res);
+    case "plan-sync":      return planSyncToValidapay(match.id, req, res);
     case "logout":         return logout(req, res);
   }
 }

@@ -17,7 +17,9 @@ import { validateAccessToken } from "./lib/oauth.ts";
 import { matchOAuthRoute, handleOAuthRoute } from "./oauth-router.ts";
 import { matchAdminRoute, handleAdminRoute } from "./admin-router.ts";
 import { matchSuperAdminRoute, handleSuperAdminRoute } from "./super-admin-router.ts";
+import { matchPublicRoute, handlePublicRoute } from "./public-router.ts";
 import { processHotmartEvent, verifyHottok, getHotmartHottok } from "./lib/hotmart.ts";
+import { processValidapayEvent } from "./lib/billing.ts";
 import type { AdapterMode } from "./ui/player.ts";
 
 const PORT = Number(process.env.PORT || 3333);
@@ -76,15 +78,22 @@ function unauthorized(res: ServerResponse, realm?: string, resourceMetadataUrl?:
 type TenantedSuffix    = { kind: "tenant"; tenantSlug: string; suffix: string };
 type LegacyMcp         = { kind: "legacy"; suffix: keyof typeof ENDPOINT_SUFFIXES };
 type HotmartHook       = { kind: "hotmart"; tenantSlug: string };
+type ValidaPayHook     = { kind: "validapay"; secret: string };
 type CanonicalDiscovery = { kind: "discovery"; tenantSlug: string; suffix: string };
 type SuperAdmin        = { kind: "super-admin"; suffix: string };
-type RouteMatch        = TenantedSuffix | LegacyMcp | HotmartHook | CanonicalDiscovery | SuperAdmin | null;
+type RouteMatch        = TenantedSuffix | LegacyMcp | HotmartHook | ValidaPayHook | CanonicalDiscovery | SuperAdmin | null;
 
 function matchRoute(url: string): RouteMatch {
   const pathOnly = url.split("?")[0];
 
   const hotmart = pathOnly.match(/^\/webhooks\/hotmart\/([a-z0-9][a-z0-9-]{0,62})$/i);
   if (hotmart) return { kind: "hotmart", tenantSlug: hotmart[1] };
+
+  // ValidaPay webhook — secret in path acts as bearer (docs don't specify
+  // a signature header). Configured once at app.validapay.com.br → fans
+  // events across all tenants; matching is by subscription id / document.
+  const validapay = pathOnly.match(/^\/webhooks\/validapay\/([A-Za-z0-9_\-]{16,128})$/);
+  if (validapay) return { kind: "validapay", secret: validapay[1] };
 
   // Platform super-admin lives at /super-admin/*
   if (pathOnly === "/super-admin" || pathOnly.startsWith("/super-admin/")) {
@@ -179,6 +188,15 @@ const httpServer = http.createServer(async (req, res) => {
     }
 
     if (!req.url) { res.writeHead(404).end("not found"); return; }
+
+    // Public routes (pricing, signup) — match before tenant-scoped path so
+    // they don't collide.
+    const pubMatch = matchPublicRoute(req.url, req.method ?? "GET");
+    if (pubMatch) {
+      await handlePublicRoute(pubMatch, req, res);
+      return;
+    }
+
     const route = matchRoute(req.url);
     if (!route) { res.writeHead(404).end("not found"); return; }
 
@@ -206,6 +224,25 @@ const httpServer = http.createServer(async (req, res) => {
         return;
       }
       res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ ok: true, action: result.action, reason: result.reason ?? null }));
+      return;
+    }
+
+    // ---------- ValidaPay webhook ----------
+    if (route.kind === "validapay") {
+      if (req.method !== "POST") { res.writeHead(405).end("method not allowed"); return; }
+      const expected = process.env.VALIDA_WEBHOOK_SECRET ?? "";
+      if (!expected) { res.writeHead(500).end("VALIDA_WEBHOOK_SECRET not configured"); return; }
+      // Constant-time-ish compare via fixed-length Buffer equality
+      const a = Buffer.from(route.secret); const b = Buffer.from(expected);
+      const ok = a.length === b.length && a.equals(b);
+      if (!ok) { res.writeHead(401).end("invalid webhook secret"); return; }
+
+      let event;
+      try { event = await readJsonBody(req); }
+      catch { res.writeHead(400).end("invalid json"); return; }
+
+      const result = await processValidapayEvent(event as Parameters<typeof processValidapayEvent>[0]);
+      res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(result));
       return;
     }
 
@@ -314,6 +351,7 @@ httpServer.listen(PORT, () => {
   console.error(`  AS discovery (RFC 8414): /.well-known/oauth-authorization-server/t/:slug`);
   console.error(`  PRM discovery (RFC 9728): /.well-known/oauth-protected-resource/t/:slug/{mcp,mcp-gpt}`);
   console.error(`  Hotmart webhook:      /webhooks/hotmart/:slug`);
+  console.error(`  ValidaPay webhook:    /webhooks/validapay/:secret`);
   console.error(`  Admin dashboard:      /t/:slug/admin (login → /t/:slug/admin/login)`);
   console.error(`  Super admin:          /super-admin (whitelist via SUPER_ADMIN_EMAILS)`);
 });
