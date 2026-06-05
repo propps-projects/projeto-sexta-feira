@@ -387,10 +387,11 @@ async function courseDetail(
 
   const lessons = await sb.select<{
     id: string; lesson_number: number | null; title: string; duration_sec: number;
-    transcript_source: string | null; created_at: string;
+    transcript_source: string | null; ingest_status: string; ingest_error: string | null;
+    transcription_cost_usd: number | null; created_at: string;
   }>(
     "lessons",
-    `course_id=eq.${course.id}&select=id,lesson_number,title,duration_sec,transcript_source,created_at&order=lesson_number.asc.nullslast`,
+    `course_id=eq.${course.id}&select=id,lesson_number,title,duration_sec,transcript_source,ingest_status,ingest_error,transcription_cost_usd,created_at&order=lesson_number.asc.nullslast`,
   );
   const materials = await sb.select<{
     id: string; name: string; type: string; size_bytes: number; created_at: string;
@@ -638,6 +639,30 @@ async function materialDelete(
     await sb.delete("materials", `id=eq.${materialId}&course_id=eq.${course.id}`);
   }
   redirect(res, `${adminBase(tenant)}/courses/${courseSlug}?msg=material_deleted`);
+}
+
+async function startIngest(
+  tenant: Tenant,
+  courseSlug: string,
+  req: IncomingMessage,
+  res: ServerResponse,
+): Promise<void> {
+  const admin = await requireAdmin(tenant, req, res);
+  if (!admin) return;
+  const course = await resolveCourseBySlug(tenant.id, courseSlug);
+  if (!course) return redirect(res, `${adminBase(tenant)}/courses?msg=course_not_found`);
+
+  try {
+    const { startPandaIngest } = await import("./lib/ingest-panda.ts");
+    const r = await startPandaIngest(tenant.id, course.id);
+    if (!r.ok) {
+      return redirect(res, `${adminBase(tenant)}/courses/${courseSlug}?msg=ingest_${r.reason ?? "failed"}`);
+    }
+    return redirect(res, `${adminBase(tenant)}/courses/${courseSlug}?msg=ingest_started&n=${r.videoCount}`);
+  } catch (err) {
+    console.error("startIngest failed:", err);
+    return redirect(res, `${adminBase(tenant)}/courses/${courseSlug}?msg=ingest_failed`);
+  }
 }
 
 // ============================================================================
@@ -965,7 +990,11 @@ ${msgText ? `<div class="msg ${msgKind}">${esc(msgText)}</div>` : ""}
 function courseDetailHtml(args: {
   tenant: Tenant;
   course: ResolvedCourse;
-  lessons: Array<{ id: string; lesson_number: number | null; title: string; duration_sec: number; transcript_source: string | null; created_at: string }>;
+  lessons: Array<{
+    id: string; lesson_number: number | null; title: string; duration_sec: number;
+    transcript_source: string | null; ingest_status: string; ingest_error: string | null;
+    transcription_cost_usd: number | null; created_at: string;
+  }>;
   materials: Array<{ id: string; name: string; type: string; size_bytes: number; created_at: string }>;
   chunkCount: number;
   message?: string;
@@ -986,8 +1015,17 @@ function courseDetailHtml(args: {
     material_kind_unsupported: ["Formato não suportado (use PDF, MD ou TXT).", "error"],
     material_ingest_failed: ["Falha ao indexar material.", "error"],
     material_deleted: ["Material removido.", "success"],
+    ingest_started: ["Ingest iniciado em background. Esta página atualiza sozinha.", "success"],
+    ingest_already_running: ["Já existe um ingest rodando pra este curso. Aguarde.", "error"],
+    ingest_missing_panda_key: ["Configure a Panda API key em Integrações antes de iniciar.", "error"],
+    ingest_missing_folder_id: ["Defina o Panda folder ID nas configurações do curso.", "error"],
+    ingest_no_videos: ["O folder Panda não tem vídeos.", "error"],
+    ingest_course_not_found: ["Curso não encontrado.", "error"],
+    ingest_failed: ["Falha ao iniciar ingest. Veja os logs.", "error"],
   };
   const [msgText, msgKind] = args.message ? msgs[args.message] ?? [args.message, "error"] : ["", ""];
+  const isIngesting = args.course.ingest_status === "ingesting"
+    || args.lessons.some((l) => l.ingest_status === "ingesting");
 
   const dur = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
   const size = (b: number) => {
@@ -996,28 +1034,59 @@ function courseDetailHtml(args: {
     return `${(b / 1024 / 1024).toFixed(1)} MB`;
   };
 
-  return `
+  // Auto-refresh meta when something is ingesting so UI advances on its own.
+  const refreshMeta = isIngesting
+    ? `<meta http-equiv="refresh" content="10">`
+    : "";
+
+  // Total estimated cost so the admin sees the bill in real time
+  const totalCostUsd = args.lessons.reduce((sum, l) => sum + (l.transcription_cost_usd ?? 0), 0);
+
+  return `${refreshMeta}
 <p><a href="/t/${esc(args.tenant.slug)}/admin/courses">← Voltar aos cursos</a></p>
 <h1>${esc(args.course.name)}</h1>
 <p>
   <code>${esc(args.course.slug)}</code>
   · <span class="badge ${esc(args.course.ingest_status)}">${esc(args.course.ingest_status)}</span>
   · ${args.lessons.length} aulas · ${args.materials.length} materiais · ${args.chunkCount} chunks
+  ${totalCostUsd > 0 ? `· Whisper: <strong>$${totalCostUsd.toFixed(2)}</strong>` : ""}
 </p>
 ${msgText ? `<div class="msg ${msgKind}">${esc(msgText)}</div>` : ""}
+${isIngesting ? '<div class="msg success">⏳ Ingest em andamento. Esta página recarrega a cada 10s.</div>' : ""}
+
+<!-- ======================== INGEST AUTOMÁTICO ======================== -->
+<div class="card">
+  <h2>Ingest automático (Panda + Whisper)</h2>
+  <p class="help">
+    Lista os vídeos do folder Panda configurado, baixa cada HLS, transcreve via OpenAI Whisper,
+    gera chunks + embeddings. Custo aproximado: $0.006/min de áudio.
+    Esta operação roda em background — você pode fechar a página, o status atualiza sozinho.
+  </p>
+  <form method="POST" action="/t/${esc(args.tenant.slug)}/admin/courses/${esc(args.course.slug)}/ingest">
+    <button type="submit" ${isIngesting ? "disabled" : ""}>
+      ${isIngesting ? "Ingest em andamento..." : "Iniciar ingest agora"}
+    </button>
+  </form>
+  <p class="help" style="margin-top:8px">
+    Pré-requisitos: <strong>Panda API key</strong> (em Integrações)
+    + <strong>folder_id</strong> no curso. Re-rodar é seguro — aulas já transcritas são puladas.
+  </p>
+</div>
 
 <!-- ======================== AULAS ======================== -->
 <div class="card">
   <h2>Aulas</h2>
-  ${args.lessons.length === 0 ? '<p class="help">Nenhuma aula ainda. Adicione manualmente ou faça upload de JSON abaixo.</p>' : `
+  ${args.lessons.length === 0 ? '<p class="help">Nenhuma aula ainda. Adicione manualmente, faça upload de JSON ou rode o ingest automático acima.</p>' : `
     <table>
-      <thead><tr><th>#</th><th>Título</th><th>Duração</th><th>Fonte</th><th></th></tr></thead>
+      <thead><tr><th>#</th><th>Título</th><th>Duração</th><th>Status</th><th>Custo</th><th>Fonte</th><th></th></tr></thead>
       <tbody>
         ${args.lessons.map((l) => `
           <tr>
             <td>${l.lesson_number ?? "—"}</td>
-            <td>${esc(l.title)}</td>
+            <td>${esc(l.title)}${l.ingest_error ? `<br><span style="font-size:11px;color:#991b1b">${esc(l.ingest_error.slice(0, 80))}</span>` : ""}</td>
             <td>${l.duration_sec ? dur(l.duration_sec) : "—"}</td>
+            <td><span class="badge ${esc(l.ingest_status)}">${esc(l.ingest_status)}</span></td>
+            <td>${l.transcription_cost_usd ? `$${l.transcription_cost_usd.toFixed(3)}` : "—"}</td>
             <td><code>${esc(l.transcript_source ?? "?")}</code></td>
             <td>
               <form method="POST" action="/t/${esc(args.tenant.slug)}/admin/courses/${esc(args.course.slug)}/lessons/delete" style="display:inline">
@@ -1133,6 +1202,7 @@ export type AdminRouteMatch =
   | { type: "lesson-delete"; courseSlug: string }
   | { type: "materials-upload"; courseSlug: string }
   | { type: "material-delete"; courseSlug: string }
+  | { type: "start-ingest"; courseSlug: string }
   | { type: "logout" };
 
 export function matchAdminRoute(suffix: string, method: string): AdminRouteMatch | null {
@@ -1159,6 +1229,7 @@ export function matchAdminRoute(suffix: string, method: string): AdminRouteMatch
     if (method === "POST" && tail === "/lessons/delete")    return { type: "lesson-delete", courseSlug };
     if (method === "POST" && tail === "/materials")         return { type: "materials-upload", courseSlug };
     if (method === "POST" && tail === "/materials/delete")  return { type: "material-delete", courseSlug };
+    if (method === "POST" && tail === "/ingest")            return { type: "start-ingest", courseSlug };
   }
   return null;
 }
@@ -1185,6 +1256,7 @@ export async function handleAdminRoute(
     case "lesson-delete":       return lessonDelete(tenant, match.courseSlug, req, res);
     case "materials-upload":    return materialsUpload(tenant, match.courseSlug, req, res);
     case "material-delete":     return materialDelete(tenant, match.courseSlug, req, res);
+    case "start-ingest":        return startIngest(tenant, match.courseSlug, req, res);
     case "logout":              return logout(tenant, req, res);
   }
 }
