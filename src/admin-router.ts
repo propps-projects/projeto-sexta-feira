@@ -346,6 +346,300 @@ async function logout(tenant: Tenant, _req: IncomingMessage, res: ServerResponse
   redirect(res, `${adminBase(tenant)}/login`);
 }
 
+// ----- Course detail + content ingest -------------------------------------
+
+interface ResolvedCourse {
+  id: string;
+  slug: string;
+  name: string;
+  ingest_status: string;
+  source_config: Record<string, unknown>;
+  hotmart_product_ids: string[];
+  created_at: string;
+}
+
+async function resolveCourseBySlug(tenantId: string, slug: string): Promise<ResolvedCourse | null> {
+  return sb.selectOne<ResolvedCourse>(
+    "courses",
+    `tenant_id=eq.${tenantId}&slug=eq.${encodeURIComponent(slug)}&select=id,slug,name,ingest_status,source_config,hotmart_product_ids,created_at`,
+  );
+}
+
+async function courseDetail(
+  tenant: Tenant,
+  courseSlug: string,
+  req: IncomingMessage,
+  res: ServerResponse,
+): Promise<void> {
+  const admin = await requireAdmin(tenant, req, res);
+  if (!admin) return;
+  const course = await resolveCourseBySlug(tenant.id, courseSlug);
+  if (!course) {
+    return html(res, 404, layoutHtml({
+      title: "Curso não encontrado",
+      tenantName: tenant.name,
+      tenantSlug: tenant.slug,
+      activeNav: "courses",
+      admin,
+      body: `<h1>Curso não encontrado</h1><p><a href="/t/${esc(tenant.slug)}/admin/courses">← Voltar</a></p>`,
+    }));
+  }
+
+  const lessons = await sb.select<{
+    id: string; lesson_number: number | null; title: string; duration_sec: number;
+    transcript_source: string | null; created_at: string;
+  }>(
+    "lessons",
+    `course_id=eq.${course.id}&select=id,lesson_number,title,duration_sec,transcript_source,created_at&order=lesson_number.asc.nullslast`,
+  );
+  const materials = await sb.select<{
+    id: string; name: string; type: string; size_bytes: number; created_at: string;
+  }>(
+    "materials",
+    `course_id=eq.${course.id}&select=id,name,type,size_bytes,created_at&order=created_at.desc`,
+  );
+
+  // Chunk counts for stats
+  const chunkCount = await sb.select<{ chunk_id: number }>(
+    "chunks",
+    `course_id=eq.${course.id}&select=id&limit=1000`,
+  );
+
+  const q = getQuery(req);
+  html(res, 200, layoutHtml({
+    title: course.name,
+    tenantName: tenant.name,
+    tenantSlug: tenant.slug,
+    activeNav: "courses",
+    admin,
+    body: courseDetailHtml({
+      tenant, course, lessons, materials,
+      chunkCount: chunkCount.length,
+      message: q.get("msg") ?? undefined,
+    }),
+  }));
+}
+
+async function lessonsPost(
+  tenant: Tenant,
+  courseSlug: string,
+  req: IncomingMessage,
+  res: ServerResponse,
+): Promise<void> {
+  const admin = await requireAdmin(tenant, req, res);
+  if (!admin) return;
+  const course = await resolveCourseBySlug(tenant.id, courseSlug);
+  if (!course) return redirect(res, `${adminBase(tenant)}/courses?msg=course_not_found`);
+
+  const form = await readForm(req);
+  const title = (form.get("title") ?? "").trim();
+  const lessonNumberRaw = (form.get("lesson_number") ?? "").trim();
+  const sourceVideoId = (form.get("source_video_id") ?? "").trim();
+  const hlsUrl = (form.get("hls_url") ?? "").trim();
+  const embedUrl = (form.get("embed_url") ?? "").trim();
+  const thumbnailUrl = (form.get("thumbnail_url") ?? "").trim();
+  const durationSecRaw = (form.get("duration_sec") ?? "0").trim();
+  const transcriptJson = (form.get("transcript_json") ?? "").trim();
+
+  if (!title || !sourceVideoId) {
+    return redirect(res, `${adminBase(tenant)}/courses/${courseSlug}?msg=lesson_missing_fields`);
+  }
+
+  let transcript: { language: string; segments: { start: number; end: number; text: string }[] } | null = null;
+  if (transcriptJson) {
+    try {
+      const parsed = JSON.parse(transcriptJson);
+      if (Array.isArray(parsed?.segments)) {
+        transcript = { language: parsed.language ?? "pt", segments: parsed.segments };
+      } else if (Array.isArray(parsed)) {
+        transcript = { language: "pt", segments: parsed };
+      }
+    } catch {
+      return redirect(res, `${adminBase(tenant)}/courses/${courseSlug}?msg=lesson_bad_transcript`);
+    }
+  }
+
+  try {
+    const { ingestLesson } = await import("./lib/ingest.ts");
+    const result = await ingestLesson(course.id, {
+      sourceVideoId,
+      lessonNumber: lessonNumberRaw ? parseInt(lessonNumberRaw, 10) : null,
+      title,
+      durationSec: parseInt(durationSecRaw, 10) || 0,
+      hlsUrl: hlsUrl || undefined,
+      embedUrl: embedUrl || undefined,
+      thumbnailUrl: thumbnailUrl || undefined,
+      transcript,
+      transcriptSource: transcript ? "uploaded" : undefined,
+    });
+    if (result.chunksInserted > 0 && course.ingest_status !== "ready") {
+      await sb.update("courses", `id=eq.${course.id}`, { ingest_status: "ready" });
+    }
+    return redirect(res, `${adminBase(tenant)}/courses/${courseSlug}?msg=lesson_saved`);
+  } catch (err) {
+    console.error("Lesson ingest failed:", err);
+    return redirect(res, `${adminBase(tenant)}/courses/${courseSlug}?msg=lesson_ingest_failed`);
+  }
+}
+
+async function lessonsUploadJson(
+  tenant: Tenant,
+  courseSlug: string,
+  req: IncomingMessage,
+  res: ServerResponse,
+): Promise<void> {
+  const admin = await requireAdmin(tenant, req, res);
+  if (!admin) return;
+  const course = await resolveCourseBySlug(tenant.id, courseSlug);
+  if (!course) return redirect(res, `${adminBase(tenant)}/courses?msg=course_not_found`);
+
+  let body;
+  try {
+    const { parseMultipart } = await import("./lib/multipart.ts");
+    body = await parseMultipart(req);
+  } catch (err) {
+    console.error("Multipart parse failed:", err);
+    return redirect(res, `${adminBase(tenant)}/courses/${courseSlug}?msg=upload_failed`);
+  }
+
+  const file = body.files["json"];
+  if (!file) {
+    return redirect(res, `${adminBase(tenant)}/courses/${courseSlug}?msg=upload_no_file`);
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(file.buffer.toString("utf8"));
+  } catch {
+    return redirect(res, `${adminBase(tenant)}/courses/${courseSlug}?msg=upload_bad_json`);
+  }
+
+  // Accept either { lessons: [...] } or [...]
+  const list: Array<Record<string, unknown>> = Array.isArray((parsed as { lessons?: unknown[] })?.lessons)
+    ? ((parsed as { lessons: Array<Record<string, unknown>> }).lessons)
+    : Array.isArray(parsed) ? parsed as Array<Record<string, unknown>> : [];
+
+  if (!list.length) {
+    return redirect(res, `${adminBase(tenant)}/courses/${courseSlug}?msg=upload_empty`);
+  }
+
+  try {
+    const { ingestLesson } = await import("./lib/ingest.ts");
+    let totalChunks = 0;
+    for (const l of list) {
+      const transcriptRaw = l.transcript as { language?: string; segments?: unknown[] } | undefined;
+      const transcript = transcriptRaw && Array.isArray(transcriptRaw.segments)
+        ? { language: (transcriptRaw.language as string) ?? "pt", segments: transcriptRaw.segments as { start: number; end: number; text: string }[] }
+        : null;
+      const result = await ingestLesson(course.id, {
+        sourceVideoId: (l.sourceVideoId ?? l.id ?? `manual-${Date.now()}`) as string,
+        lessonNumber: (l.lessonNumber ?? null) as number | null,
+        title: (l.title ?? "Sem título") as string,
+        durationSec: (l.durationSec ?? 0) as number,
+        hlsUrl: l.hlsUrl as string | undefined,
+        embedUrl: l.embedUrl as string | undefined,
+        thumbnailUrl: l.thumbnailUrl as string | undefined,
+        transcript,
+        transcriptSource: transcript ? "uploaded" : undefined,
+      });
+      totalChunks += result.chunksInserted;
+    }
+    if (totalChunks > 0) {
+      await sb.update("courses", `id=eq.${course.id}`, { ingest_status: "ready" });
+    }
+    return redirect(res, `${adminBase(tenant)}/courses/${courseSlug}?msg=upload_ok&n=${list.length}`);
+  } catch (err) {
+    console.error("Lesson upload ingest failed:", err);
+    return redirect(res, `${adminBase(tenant)}/courses/${courseSlug}?msg=upload_failed`);
+  }
+}
+
+async function materialsUpload(
+  tenant: Tenant,
+  courseSlug: string,
+  req: IncomingMessage,
+  res: ServerResponse,
+): Promise<void> {
+  const admin = await requireAdmin(tenant, req, res);
+  if (!admin) return;
+  const course = await resolveCourseBySlug(tenant.id, courseSlug);
+  if (!course) return redirect(res, `${adminBase(tenant)}/courses?msg=course_not_found`);
+
+  let body;
+  try {
+    const { parseMultipart } = await import("./lib/multipart.ts");
+    body = await parseMultipart(req);
+  } catch (err) {
+    console.error("Material multipart failed:", err);
+    return redirect(res, `${adminBase(tenant)}/courses/${courseSlug}?msg=material_upload_failed`);
+  }
+
+  const file = body.files["material"];
+  if (!file) {
+    return redirect(res, `${adminBase(tenant)}/courses/${courseSlug}?msg=material_no_file`);
+  }
+  const { detectKind } = await import("./lib/material-parse.ts");
+  const kind = detectKind(file.filename, file.mimeType);
+  if (!kind) {
+    return redirect(res, `${adminBase(tenant)}/courses/${courseSlug}?msg=material_kind_unsupported`);
+  }
+
+  try {
+    const { ingestMaterial } = await import("./lib/ingest.ts");
+    const result = await ingestMaterial(course.id, {
+      filename: file.filename,
+      kind,
+      byteSize: file.buffer.length,
+      rawBytes: file.buffer,
+    });
+    if (result.chunksInserted > 0 && course.ingest_status !== "ready") {
+      await sb.update("courses", `id=eq.${course.id}`, { ingest_status: "ready" });
+    }
+    return redirect(res, `${adminBase(tenant)}/courses/${courseSlug}?msg=material_saved&n=${result.chunksInserted}`);
+  } catch (err) {
+    console.error("Material ingest failed:", err);
+    return redirect(res, `${adminBase(tenant)}/courses/${courseSlug}?msg=material_ingest_failed`);
+  }
+}
+
+async function lessonDelete(
+  tenant: Tenant,
+  courseSlug: string,
+  req: IncomingMessage,
+  res: ServerResponse,
+): Promise<void> {
+  const admin = await requireAdmin(tenant, req, res);
+  if (!admin) return;
+  const course = await resolveCourseBySlug(tenant.id, courseSlug);
+  if (!course) return redirect(res, `${adminBase(tenant)}/courses?msg=course_not_found`);
+
+  const form = await readForm(req);
+  const lessonId = (form.get("lesson_id") ?? "").trim();
+  if (lessonId) {
+    await sb.delete("lessons", `id=eq.${lessonId}&course_id=eq.${course.id}`);
+  }
+  redirect(res, `${adminBase(tenant)}/courses/${courseSlug}?msg=lesson_deleted`);
+}
+
+async function materialDelete(
+  tenant: Tenant,
+  courseSlug: string,
+  req: IncomingMessage,
+  res: ServerResponse,
+): Promise<void> {
+  const admin = await requireAdmin(tenant, req, res);
+  if (!admin) return;
+  const course = await resolveCourseBySlug(tenant.id, courseSlug);
+  if (!course) return redirect(res, `${adminBase(tenant)}/courses?msg=course_not_found`);
+
+  const form = await readForm(req);
+  const materialId = (form.get("material_id") ?? "").trim();
+  if (materialId) {
+    await sb.delete("materials", `id=eq.${materialId}&course_id=eq.${course.id}`);
+  }
+  redirect(res, `${adminBase(tenant)}/courses/${courseSlug}?msg=material_deleted`);
+}
+
 // ============================================================================
 // HTML templates
 // ============================================================================
@@ -655,7 +949,7 @@ ${msgText ? `<div class="msg ${msgKind}">${esc(msgText)}</div>` : ""}
       <tbody>
         ${args.courses.map((c) => `
           <tr>
-            <td><strong>${esc(c.name)}</strong></td>
+            <td><a href="/t/${esc(args.tenant.slug)}/admin/courses/${esc(c.slug)}"><strong>${esc(c.name)}</strong></a></td>
             <td><code>${esc(c.slug)}</code></td>
             <td><span class="badge ${esc(c.ingest_status)}">${esc(c.ingest_status)}</span></td>
             <td>${(c.hotmart_product_ids ?? []).length ? c.hotmart_product_ids.map((p) => `<code>${esc(p)}</code>`).join(" ") : "<em>nenhum</em>"}</td>
@@ -668,18 +962,178 @@ ${msgText ? `<div class="msg ${msgKind}">${esc(msgText)}</div>` : ""}
 </div>`;
 }
 
+function courseDetailHtml(args: {
+  tenant: Tenant;
+  course: ResolvedCourse;
+  lessons: Array<{ id: string; lesson_number: number | null; title: string; duration_sec: number; transcript_source: string | null; created_at: string }>;
+  materials: Array<{ id: string; name: string; type: string; size_bytes: number; created_at: string }>;
+  chunkCount: number;
+  message?: string;
+}): string {
+  const msgs: Record<string, [string, "success" | "error"]> = {
+    lesson_saved: ["Aula salva + chunks indexados.", "success"],
+    lesson_missing_fields: ["Preencha título e source_video_id.", "error"],
+    lesson_bad_transcript: ["JSON de transcrição inválido.", "error"],
+    lesson_ingest_failed: ["Falha ao salvar aula. Veja os logs.", "error"],
+    lesson_deleted: ["Aula removida.", "success"],
+    upload_ok: ["Upload de aulas processado com sucesso.", "success"],
+    upload_no_file: ["Selecione um arquivo JSON.", "error"],
+    upload_bad_json: ["Arquivo não é JSON válido.", "error"],
+    upload_empty: ["JSON não contém aulas.", "error"],
+    upload_failed: ["Upload falhou. Veja os logs.", "error"],
+    material_saved: ["Material indexado.", "success"],
+    material_no_file: ["Selecione um arquivo.", "error"],
+    material_kind_unsupported: ["Formato não suportado (use PDF, MD ou TXT).", "error"],
+    material_ingest_failed: ["Falha ao indexar material.", "error"],
+    material_deleted: ["Material removido.", "success"],
+  };
+  const [msgText, msgKind] = args.message ? msgs[args.message] ?? [args.message, "error"] : ["", ""];
+
+  const dur = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  const size = (b: number) => {
+    if (b < 1024) return `${b} B`;
+    if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
+    return `${(b / 1024 / 1024).toFixed(1)} MB`;
+  };
+
+  return `
+<p><a href="/t/${esc(args.tenant.slug)}/admin/courses">← Voltar aos cursos</a></p>
+<h1>${esc(args.course.name)}</h1>
+<p>
+  <code>${esc(args.course.slug)}</code>
+  · <span class="badge ${esc(args.course.ingest_status)}">${esc(args.course.ingest_status)}</span>
+  · ${args.lessons.length} aulas · ${args.materials.length} materiais · ${args.chunkCount} chunks
+</p>
+${msgText ? `<div class="msg ${msgKind}">${esc(msgText)}</div>` : ""}
+
+<!-- ======================== AULAS ======================== -->
+<div class="card">
+  <h2>Aulas</h2>
+  ${args.lessons.length === 0 ? '<p class="help">Nenhuma aula ainda. Adicione manualmente ou faça upload de JSON abaixo.</p>' : `
+    <table>
+      <thead><tr><th>#</th><th>Título</th><th>Duração</th><th>Fonte</th><th></th></tr></thead>
+      <tbody>
+        ${args.lessons.map((l) => `
+          <tr>
+            <td>${l.lesson_number ?? "—"}</td>
+            <td>${esc(l.title)}</td>
+            <td>${l.duration_sec ? dur(l.duration_sec) : "—"}</td>
+            <td><code>${esc(l.transcript_source ?? "?")}</code></td>
+            <td>
+              <form method="POST" action="/t/${esc(args.tenant.slug)}/admin/courses/${esc(args.course.slug)}/lessons/delete" style="display:inline">
+                <input type="hidden" name="lesson_id" value="${esc(l.id)}">
+                <button type="submit" class="danger" style="padding:4px 10px;font-size:12px" onclick="return confirm('Remover esta aula?')">remover</button>
+              </form>
+            </td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `}
+
+  <hr>
+  <h3>Adicionar aula manualmente</h3>
+  <p class="help">Use quando você tem a transcrição pronta e quer colar direto. <code>source_video_id</code> identifica de forma única (ex: ID do vídeo no Panda/Vimeo/YouTube).</p>
+  <form method="POST" action="/t/${esc(args.tenant.slug)}/admin/courses/${esc(args.course.slug)}/lessons">
+    <div class="row">
+      <div><label>Título *</label><input type="text" name="title" required placeholder="Aula 01 — Introdução"></div>
+      <div><label>Número da aula</label><input type="text" name="lesson_number" placeholder="1"></div>
+      <div><label>Duração (segundos)</label><input type="text" name="duration_sec" placeholder="600"></div>
+    </div>
+    <div class="row">
+      <div><label>Source Video ID *</label><input type="text" name="source_video_id" required placeholder="uuid ou ID do vídeo"></div>
+    </div>
+    <div class="row">
+      <div><label>HLS URL</label><input type="text" name="hls_url" placeholder="https://.../playlist.m3u8"></div>
+      <div><label>Embed URL</label><input type="text" name="embed_url" placeholder="https://.../embed?v=..."></div>
+    </div>
+    <div class="row">
+      <div><label>Thumbnail URL</label><input type="text" name="thumbnail_url" placeholder="https://.../thumb.jpg"></div>
+    </div>
+    <div><label>Transcrição (JSON com array de segments)</label>
+      <textarea name="transcript_json" style="min-height:140px;font-family:monospace;font-size:12px" placeholder='{"language":"pt","segments":[{"start":0,"end":4.5,"text":"texto da aula..."}, ...]}'></textarea>
+      <p class="help">Aceita formato OpenAI Whisper (<code>segments[]</code> com <code>start/end/text</code>) ou um array puro de segments.</p>
+    </div>
+    <div style="margin-top:12px"><button type="submit">Salvar aula</button></div>
+  </form>
+
+  <hr>
+  <h3>Upload de JSON pré-transcrito (vários de uma vez)</h3>
+  <p class="help">JSON no formato <code>{"lessons":[{"sourceVideoId":"...","title":"...","durationSec":600,"transcript":{"language":"pt","segments":[...]}}]}</code></p>
+  <form method="POST" action="/t/${esc(args.tenant.slug)}/admin/courses/${esc(args.course.slug)}/lessons/upload" enctype="multipart/form-data">
+    <div class="row">
+      <div><label>Arquivo JSON</label><input type="file" name="json" accept="application/json,.json" required></div>
+      <button type="submit">Enviar</button>
+    </div>
+  </form>
+</div>
+
+<!-- ======================== MATERIAIS (KB) ======================== -->
+<div class="card">
+  <h2>Materiais (base de conhecimento)</h2>
+  <p class="help">Adicione PDFs, markdown ou TXTs. O conteúdo é extraído, chunkado e indexado pra busca semântica do tutor. Útil pra ebooks, módulos teóricos, FAQs, transcrições externas.</p>
+
+  ${args.materials.length === 0 ? '<p class="help">Nenhum material ainda.</p>' : `
+    <table>
+      <thead><tr><th>Nome</th><th>Tipo</th><th>Tamanho</th><th>Criado</th><th></th></tr></thead>
+      <tbody>
+        ${args.materials.map((m) => `
+          <tr>
+            <td>${esc(m.name)}</td>
+            <td><code>${esc(m.type)}</code></td>
+            <td>${size(m.size_bytes)}</td>
+            <td>${esc(new Date(m.created_at).toLocaleDateString("pt-BR"))}</td>
+            <td>
+              <form method="POST" action="/t/${esc(args.tenant.slug)}/admin/courses/${esc(args.course.slug)}/materials/delete" style="display:inline">
+                <input type="hidden" name="material_id" value="${esc(m.id)}">
+                <button type="submit" class="danger" style="padding:4px 10px;font-size:12px" onclick="return confirm('Remover este material?')">remover</button>
+              </form>
+            </td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `}
+
+  <hr>
+  <h3>Upload de material</h3>
+  <form method="POST" action="/t/${esc(args.tenant.slug)}/admin/courses/${esc(args.course.slug)}/materials" enctype="multipart/form-data">
+    <div class="row">
+      <div><label>Arquivo (PDF, MD ou TXT — máx 25 MB)</label><input type="file" name="material" accept=".pdf,.md,.markdown,.txt,application/pdf,text/markdown,text/plain" required></div>
+      <button type="submit">Enviar</button>
+    </div>
+  </form>
+</div>
+
+<!-- ======================== INFO ======================== -->
+<div class="card">
+  <h2>Sobre este curso</h2>
+  <p><strong>Hotmart products mapeados:</strong> ${(args.course.hotmart_product_ids ?? []).length
+    ? args.course.hotmart_product_ids.map((p) => `<code>${esc(p)}</code>`).join(" ")
+    : "<em>nenhum — configure em Integrações</em>"}</p>
+  <p><strong>Panda folder ID:</strong> ${typeof args.course.source_config?.folder_id === "string"
+    ? `<code>${esc(args.course.source_config.folder_id)}</code>`
+    : "<em>não configurado</em>"}</p>
+  <p class="help" style="margin-top:12px">Ingest automático via Panda + Whisper chega na próxima sub-fase (2.3). Por enquanto, use os caminhos manuais acima.</p>
+</div>`;
+}
+
 // ============================================================================
 // Router
 // ============================================================================
 
-export interface AdminRouteMatch {
-  type:
-    | "login-get" | "login-post" | "verify"
-    | "dashboard"
-    | "integrations-get" | "integrations-hotmart" | "integrations-panda"
-    | "courses-get" | "courses-post"
-    | "logout";
-}
+export type AdminRouteMatch =
+  | { type: "login-get" } | { type: "login-post" } | { type: "verify" }
+  | { type: "dashboard" }
+  | { type: "integrations-get" } | { type: "integrations-hotmart" } | { type: "integrations-panda" }
+  | { type: "courses-get" } | { type: "courses-post" }
+  | { type: "course-detail"; courseSlug: string }
+  | { type: "lessons-post"; courseSlug: string }
+  | { type: "lessons-upload"; courseSlug: string }
+  | { type: "lesson-delete"; courseSlug: string }
+  | { type: "materials-upload"; courseSlug: string }
+  | { type: "material-delete"; courseSlug: string }
+  | { type: "logout" };
 
 export function matchAdminRoute(suffix: string, method: string): AdminRouteMatch | null {
   const path = suffix.split("?")[0];
@@ -693,6 +1147,19 @@ export function matchAdminRoute(suffix: string, method: string): AdminRouteMatch
   if (method === "GET"  && path === "/courses") return { type: "courses-get" };
   if (method === "POST" && path === "/courses") return { type: "courses-post" };
   if (method === "GET"  && path === "/logout")  return { type: "logout" };
+
+  // Course-scoped routes: /courses/:slug/...
+  const courseMatch = path.match(/^\/courses\/([a-z0-9][a-z0-9-]{0,62})(\/.*)?$/i);
+  if (courseMatch) {
+    const courseSlug = courseMatch[1];
+    const tail = courseMatch[2] ?? "";
+    if (method === "GET"  && (tail === "" || tail === "/")) return { type: "course-detail", courseSlug };
+    if (method === "POST" && tail === "/lessons")           return { type: "lessons-post", courseSlug };
+    if (method === "POST" && tail === "/lessons/upload")    return { type: "lessons-upload", courseSlug };
+    if (method === "POST" && tail === "/lessons/delete")    return { type: "lesson-delete", courseSlug };
+    if (method === "POST" && tail === "/materials")         return { type: "materials-upload", courseSlug };
+    if (method === "POST" && tail === "/materials/delete")  return { type: "material-delete", courseSlug };
+  }
   return null;
 }
 
@@ -712,6 +1179,12 @@ export async function handleAdminRoute(
     case "integrations-panda":  return integrationsPandaPost(tenant, req, res);
     case "courses-get":         return coursesGet(tenant, req, res);
     case "courses-post":        return coursesPost(tenant, req, res);
+    case "course-detail":       return courseDetail(tenant, match.courseSlug, req, res);
+    case "lessons-post":        return lessonsPost(tenant, match.courseSlug, req, res);
+    case "lessons-upload":      return lessonsUploadJson(tenant, match.courseSlug, req, res);
+    case "lesson-delete":       return lessonDelete(tenant, match.courseSlug, req, res);
+    case "materials-upload":    return materialsUpload(tenant, match.courseSlug, req, res);
+    case "material-delete":     return materialDelete(tenant, match.courseSlug, req, res);
     case "logout":              return logout(tenant, req, res);
   }
 }
