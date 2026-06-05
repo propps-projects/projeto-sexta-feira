@@ -113,25 +113,53 @@ async function register(tenant: Tenant, req: IncomingMessage, res: ServerRespons
       client_name?: string;
       redirect_uris?: string[];
       scope?: string;
+      grant_types?: string[];
+      response_types?: string[];
+      token_endpoint_auth_method?: string;
+      application_type?: string;
     }>(req);
     const redirectUris = body.redirect_uris ?? [];
     if (!redirectUris.length) {
       return json(res, 400, { error: "invalid_redirect_uri", error_description: "redirect_uris required" });
     }
+
+    // Public clients (MCP browsers / PKCE) ask for `none`; confidential
+    // clients omit it and we default to client_secret_basic. We persist
+    // a secret either way (it's a hash, harmless) but only return it
+    // when the client is confidential — public clients ignore it and
+    // some validators reject responses that include it.
+    const authMethod = body.token_endpoint_auth_method ?? "none";
+    const isPublic = authMethod === "none";
+
     const { client, clientSecret } = await registerClient({
       tenantId: tenant.id,
       clientName: body.client_name,
       redirectUris,
       scopes: body.scope ? body.scope.split(/\s+/) : ["mcp"],
     });
-    json(res, 201, {
+
+    const issuedAt = Math.floor(Date.now() / 1000);
+    const response: Record<string, unknown> = {
       client_id: client.clientId,
-      client_secret: clientSecret,
+      client_id_issued_at: issuedAt,
       redirect_uris: client.redirectUris,
+      grant_types: body.grant_types ?? ["authorization_code", "refresh_token"],
+      response_types: body.response_types ?? ["code"],
+      token_endpoint_auth_method: authMethod,
       scope: client.scopes.join(" "),
-      token_endpoint_auth_method: "none",
-    });
+    };
+    if (body.client_name) response.client_name = body.client_name;
+    if (body.application_type) response.application_type = body.application_type;
+    if (!isPublic) {
+      response.client_secret = clientSecret;
+      response.client_secret_expires_at = 0;  // never expires
+    }
+
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("Pragma", "no-cache");
+    json(res, 201, response);
   } catch (err) {
+    console.error("DCR error:", err);
     json(res, 400, { error: "invalid_request", error_description: String(err) });
   }
 }
