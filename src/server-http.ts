@@ -59,9 +59,11 @@ async function readRawBody(req: IncomingMessage): Promise<string> {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-function unauthorized(res: ServerResponse, realm?: string) {
+function unauthorized(res: ServerResponse, realm?: string, resourceMetadataUrl?: string) {
   if (realm) {
-    res.setHeader("WWW-Authenticate", `Bearer realm="${realm}"`);
+    const parts = [`Bearer realm="${realm}"`];
+    if (resourceMetadataUrl) parts.push(`resource_metadata="${resourceMetadataUrl}"`);
+    res.setHeader("WWW-Authenticate", parts.join(", "));
   }
   res.writeHead(401, { "Content-Type": "application/json" });
   res.end(JSON.stringify({ jsonrpc: "2.0", error: { code: -32001, message: "Unauthorized" }, id: null }));
@@ -69,16 +71,30 @@ function unauthorized(res: ServerResponse, realm?: string) {
 
 // ----- Route shapes -------------------------------------------------------
 
-type TenantedSuffix = { kind: "tenant"; tenantSlug: string; suffix: string };
-type LegacyMcp     = { kind: "legacy"; suffix: keyof typeof ENDPOINT_SUFFIXES };
-type HotmartHook   = { kind: "hotmart"; tenantSlug: string };
-type RouteMatch    = TenantedSuffix | LegacyMcp | HotmartHook | null;
+type TenantedSuffix    = { kind: "tenant"; tenantSlug: string; suffix: string };
+type LegacyMcp         = { kind: "legacy"; suffix: keyof typeof ENDPOINT_SUFFIXES };
+type HotmartHook       = { kind: "hotmart"; tenantSlug: string };
+type CanonicalDiscovery = { kind: "discovery"; tenantSlug: string; suffix: string };
+type RouteMatch        = TenantedSuffix | LegacyMcp | HotmartHook | CanonicalDiscovery | null;
 
 function matchRoute(url: string): RouteMatch {
   const pathOnly = url.split("?")[0];
 
   const hotmart = pathOnly.match(/^\/webhooks\/hotmart\/([a-z0-9][a-z0-9-]{0,62})$/i);
   if (hotmart) return { kind: "hotmart", tenantSlug: hotmart[1] };
+
+  // Canonical RFC 8414 / RFC 9728 well-known URLs put the issuer/resource
+  // path AFTER the well-known segment. We serve both these and the legacy
+  // /t/:slug/.well-known/* aliases (the latter are handled in the tenant
+  // branch below).
+  //
+  //   /.well-known/oauth-authorization-server/t/:slug         (AS metadata)
+  //   /.well-known/oauth-protected-resource/t/:slug/mcp       (PRM)
+  //   /.well-known/oauth-protected-resource/t/:slug/mcp-gpt   (PRM gpt)
+  const wkAs = pathOnly.match(/^\/\.well-known\/oauth-authorization-server\/t\/([a-z0-9][a-z0-9-]{0,62})\/?$/i);
+  if (wkAs) return { kind: "discovery", tenantSlug: wkAs[1], suffix: "/.well-known/oauth-authorization-server" };
+  const wkPrm = pathOnly.match(/^\/\.well-known\/oauth-protected-resource\/t\/([a-z0-9][a-z0-9-]{0,62})\/(mcp|mcp-gpt)\/?$/i);
+  if (wkPrm) return { kind: "discovery", tenantSlug: wkPrm[1], suffix: "/.well-known/oauth-protected-resource" };
 
   const tenantMatch = pathOnly.match(/^\/t\/([a-z0-9][a-z0-9-]{0,62})(\/.*)$/i);
   if (tenantMatch) return { kind: "tenant", tenantSlug: tenantMatch[1], suffix: tenantMatch[2] };
@@ -184,6 +200,16 @@ const httpServer = http.createServer(async (req, res) => {
       return;
     }
 
+    // ---------- Canonical RFC 8414/9728 well-known discovery ----------
+    if (route.kind === "discovery") {
+      const tenant = await resolveTenantBySlug(route.tenantSlug);
+      if (!tenant) { res.writeHead(404).end("tenant not found"); return; }
+      const oauthMatch = matchOAuthRoute(route.suffix, req.method ?? "GET");
+      if (!oauthMatch) { res.writeHead(404).end("not found"); return; }
+      await handleOAuthRoute(oauthMatch, tenant, req, res);
+      return;
+    }
+
     // ---------- Tenant routes (OAuth + MCP) ----------
     if (route.kind === "tenant") {
       const tenant = await resolveTenantBySlug(route.tenantSlug);
@@ -200,17 +226,19 @@ const httpServer = http.createServer(async (req, res) => {
       const adapterMode = ENDPOINT_SUFFIXES[route.suffix as keyof typeof ENDPOINT_SUFFIXES];
       if (!adapterMode) { res.writeHead(404).end("not found"); return; }
 
+      // PRM URL for this resource — clients dereference it per RFC 9728 § 5
+      // to discover the AS metadata URL.
+      const publicUrl = (process.env.PUBLIC_URL || "http://localhost:3333").replace(/\/+$/, "");
+      const prmUrl = `${publicUrl}/.well-known/oauth-protected-resource/t/${tenant.slug}${route.suffix}`;
+      const realm = `Askine ${tenant.slug}`;
+
       const bearer = (req.headers.authorization || "").replace(/^Bearer\s+/i, "");
-      if (!bearer) {
-        return unauthorized(res, `Askine ${tenant.slug}`);
-      }
+      if (!bearer) return unauthorized(res, realm, prmUrl);
       const claims = await validateAccessToken(bearer);
-      if (!claims) {
-        return unauthorized(res, `Askine ${tenant.slug}`);
-      }
+      if (!claims) return unauthorized(res, realm, prmUrl);
       const student = await findStudentById(claims.studentId);
       if (!student || student.tenantId !== tenant.id) {
-        return unauthorized(res, `Askine ${tenant.slug}`);
+        return unauthorized(res, realm, prmUrl);
       }
       const accessibleCourseIds = await listAccessibleCourseIds(student.id, tenant.id);
 
@@ -254,6 +282,7 @@ httpServer.listen(PORT, () => {
   console.error(`askine MCP HTTP server listening on :${PORT}`);
   console.error(`  Legacy single-tenant: ${routes} — ${legacy}`);
   console.error(`  Multi-tenant:         /t/:slug/{mcp,mcp-gpt} — OAuth Bearer required`);
-  console.error(`  OAuth discovery:      /t/:slug/.well-known/oauth-{authorization-server,protected-resource}`);
+  console.error(`  AS discovery (RFC 8414): /.well-known/oauth-authorization-server/t/:slug`);
+  console.error(`  PRM discovery (RFC 9728): /.well-known/oauth-protected-resource/t/:slug/{mcp,mcp-gpt}`);
   console.error(`  Hotmart webhook:      /webhooks/hotmart/:slug`);
 });
