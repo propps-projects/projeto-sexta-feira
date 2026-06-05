@@ -20,6 +20,7 @@ import { matchSuperAdminRoute, handleSuperAdminRoute } from "./super-admin-route
 import { matchPublicRoute, handlePublicRoute } from "./public-router.ts";
 import { processHotmartEvent, verifyHottok, getHotmartHottok } from "./lib/hotmart.ts";
 import { processValidapayEvent } from "./lib/billing.ts";
+import { verifyWebhookSignature } from "./lib/validapay.ts";
 import type { AdapterMode } from "./ui/player.ts";
 
 const PORT = Number(process.env.PORT || 3333);
@@ -228,17 +229,34 @@ const httpServer = http.createServer(async (req, res) => {
     }
 
     // ---------- ValidaPay webhook ----------
+    //
+    // Defense in depth — TWO checks must pass:
+    //   1. Path-segment secret matches VALIDA_WEBHOOK_SECRET env
+    //      (gate to drop random scanners early; we control this value)
+    //   2. HMAC-SHA256 signature in x-webhook-signature header matches
+    //      VALIDA_WEBHOOK_SIGNING_SECRET env (ValidaPay's secret —
+    //      shown in their webhook config UI; this is real auth +
+    //      tamper detection + replay protection within 5 min)
     if (route.kind === "validapay") {
       if (req.method !== "POST") { res.writeHead(405).end("method not allowed"); return; }
-      const expected = process.env.VALIDA_WEBHOOK_SECRET ?? "";
-      if (!expected) { res.writeHead(500).end("VALIDA_WEBHOOK_SECRET not configured"); return; }
-      // Constant-time-ish compare via fixed-length Buffer equality
-      const a = Buffer.from(route.secret); const b = Buffer.from(expected);
-      const ok = a.length === b.length && a.equals(b);
-      if (!ok) { res.writeHead(401).end("invalid webhook secret"); return; }
+      const pathExpected = process.env.VALIDA_WEBHOOK_SECRET ?? "";
+      if (!pathExpected) { res.writeHead(500).end("VALIDA_WEBHOOK_SECRET not configured"); return; }
+      const a = Buffer.from(route.secret); const b = Buffer.from(pathExpected);
+      const pathOk = a.length === b.length && a.equals(b);
+      if (!pathOk) { res.writeHead(401).end("invalid path secret"); return; }
+
+      // Read the RAW body bytes for HMAC computation, then JSON-parse.
+      const raw = await readRawBody(req);
+      const sigHeader = req.headers["x-webhook-signature"] as string | undefined;
+      const verdict = verifyWebhookSignature(raw, sigHeader);
+      if (!verdict.ok) {
+        console.warn(`[validapay] webhook rejected: ${verdict.reason}`);
+        res.writeHead(401).end(`invalid signature: ${verdict.reason}`);
+        return;
+      }
 
       let event;
-      try { event = await readJsonBody(req); }
+      try { event = JSON.parse(raw); }
       catch { res.writeHead(400).end("invalid json"); return; }
 
       const result = await processValidapayEvent(event as Parameters<typeof processValidapayEvent>[0]);

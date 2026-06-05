@@ -8,8 +8,13 @@
  *   VALIDA_CLIENTE_ID
  *   VALIDA_CLIENTE_SECRET
  *   VALIDA_ENV         = sandbox | prod    (default: sandbox)
- *   VALIDA_WEBHOOK_SECRET = path-segment auth for /webhooks/validapay/:secret
+ *   VALIDA_WEBHOOK_SECRET         = path-segment auth for /webhooks/validapay/:secret
+ *   VALIDA_WEBHOOK_SIGNING_SECRET = HMAC-SHA256 signing secret from ValidaPay
+ *                                   webhook config UI (used to verify
+ *                                   x-webhook-signature header)
  */
+
+import { createHmac, timingSafeEqual } from "node:crypto";
 
 const SANDBOX = {
   oauth: "https://oauth2-sandbox.validapay.com.br/auth/token",
@@ -150,4 +155,53 @@ export async function createCheckoutSession(args: {
     allowedPaymentMethods: args.allowedPaymentMethods ?? ["pix", "creditcard"],
     customer: args.customer,
   });
+}
+
+// ----- Webhook signature verification --------------------------------------
+
+const REPLAY_WINDOW_MS = 5 * 60 * 1000; // 5 min per ValidaPay docs
+
+export type WebhookVerifyResult =
+  | { ok: true }
+  | { ok: false; reason: "missing_header" | "bad_format" | "stale" | "bad_signature" | "no_secret" };
+
+/**
+ * Verify ValidaPay's x-webhook-signature header against the raw body.
+ * Format: `t=<timestamp-ms>,v1=<HMAC-SHA256(secret, `${t}.${body}`)>`
+ *
+ *   - timestamp older than 5 minutes is rejected (replay protection)
+ *   - HMAC is hex-encoded; comparison is constant-time
+ *   - When VALIDA_WEBHOOK_SIGNING_SECRET is unset, returns no_secret
+ *     so the caller can decide whether to accept (dev) or reject (prod)
+ */
+export function verifyWebhookSignature(
+  rawBody: string,
+  signatureHeader: string | undefined,
+): WebhookVerifyResult {
+  const secret = process.env.VALIDA_WEBHOOK_SIGNING_SECRET;
+  if (!secret) return { ok: false, reason: "no_secret" };
+  if (!signatureHeader) return { ok: false, reason: "missing_header" };
+
+  const parts: Record<string, string> = {};
+  for (const p of signatureHeader.split(",")) {
+    const eq = p.indexOf("=");
+    if (eq < 0) continue;
+    parts[p.slice(0, eq).trim()] = p.slice(eq + 1).trim();
+  }
+  const t = parts.t;
+  const v1 = parts.v1;
+  if (!t || !v1) return { ok: false, reason: "bad_format" };
+
+  const tsMs = Number(t);
+  if (!Number.isFinite(tsMs) || Math.abs(Date.now() - tsMs) > REPLAY_WINDOW_MS) {
+    return { ok: false, reason: "stale" };
+  }
+
+  const expected = createHmac("sha256", secret).update(`${t}.${rawBody}`).digest("hex");
+  const a = Buffer.from(expected);
+  const b = Buffer.from(v1);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) {
+    return { ok: false, reason: "bad_signature" };
+  }
+  return { ok: true };
 }
