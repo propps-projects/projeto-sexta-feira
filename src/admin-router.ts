@@ -361,6 +361,204 @@ async function logout(tenant: Tenant, _req: IncomingMessage, res: ServerResponse
   redirect(res, `${adminBase(tenant)}/login`);
 }
 
+// ----- Students bulk import (Phase 5.4) -----------------------------------
+
+async function studentsImportGet(tenant: Tenant, req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const admin = await requireAdmin(tenant, req, res);
+  if (!admin) return;
+  const { listCoursesForTenant } = await import("./lib/courses.ts");
+  const courses = (await listCoursesForTenant(tenant.id)).filter((c) => c.ingestStatus === "ready");
+  const url = new URL(req.url ?? "/", "http://x");
+  const msg = url.searchParams.get("msg") ?? undefined;
+  html(res, 200, layoutHtml({
+    title: "Importar alunos",
+    tenantName: tenant.name,
+    tenantSlug: tenant.slug,
+    tenantStatus: tenant.status,
+    activeNav: "students",
+    admin,
+    body: studentsImportFormHtml({ courses, msg }),
+  }));
+}
+
+async function studentsImportPost(tenant: Tenant, req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const admin = await requireAdmin(tenant, req, res);
+  if (!admin) return;
+  const form = await readForm(req);
+  const csv = form.get("csv") ?? "";
+  const courseIds = form.getAll("courseId").filter(Boolean);
+
+  if (!csv.trim()) {
+    return redirect(res, `${adminBase(tenant)}/students/import?msg=empty_csv`);
+  }
+  if (!courseIds.length) {
+    return redirect(res, `${adminBase(tenant)}/students/import?msg=no_courses`);
+  }
+
+  const { parseCsvText, importStudents } = await import("./lib/student-import.ts");
+  const parsed = parseCsvText(csv);
+  const summary = await importStudents({
+    tenantId: tenant.id,
+    courseIds,
+    rows: parsed.rows,
+  });
+
+  // Render the result page directly (no redirect → keeps the summary visible)
+  const { listCoursesForTenant } = await import("./lib/courses.ts");
+  const courses = (await listCoursesForTenant(tenant.id)).filter((c) => c.ingestStatus === "ready");
+  const selectedCourseNames = courses.filter((c) => courseIds.includes(c.id)).map((c) => c.name);
+  html(res, 200, layoutHtml({
+    title: "Importação concluída",
+    tenantName: tenant.name,
+    tenantSlug: tenant.slug,
+    tenantStatus: tenant.status,
+    activeNav: "students",
+    admin,
+    body: studentsImportResultHtml({
+      summary,
+      parseErrors: parsed.errors,
+      selectedCourseNames,
+      hadHeader: parsed.hadHeader,
+    }),
+  }));
+}
+
+function studentsImportFormHtml(args: {
+  courses: Array<{ id: string; name: string; slug: string }>;
+  msg?: string;
+}): string {
+  const messages: Record<string, { text: string; cls: string }> = {
+    empty_csv: { text: "Cole o conteúdo do CSV antes de importar.", cls: "error" },
+    no_courses: { text: "Selecione pelo menos um curso para conceder acesso.", cls: "error" },
+  };
+  const banner = args.msg && messages[args.msg]
+    ? `<div class="msg ${messages[args.msg].cls}">${esc(messages[args.msg].text)}</div>`
+    : "";
+
+  if (!args.courses.length) {
+    return `
+<h1>Importar alunos</h1>
+<div class="msg warn">
+  Você ainda não tem nenhum curso pronto (ingest concluído).
+  Crie um curso primeiro em <a href="../courses">Cursos</a> e rode o ingest antes de importar alunos.
+</div>`;
+  }
+
+  const courseOptions = args.courses.map((c) => `
+    <label class="checkbox-row">
+      <input type="checkbox" name="courseId" value="${esc(c.id)}" checked>
+      <span><strong>${esc(c.name)}</strong> <code>${esc(c.slug)}</code></span>
+    </label>`).join("");
+
+  return `
+<h1>Importar alunos</h1>
+<p class="help">
+  Cola a lista de alunos que compraram antes de você integrar a Askine. Cada aluno
+  vai receber acesso aos cursos selecionados. Quando ele tentar logar no /mcp pela
+  primeira vez, vamos reconhecer o email e liberar o conteúdo.
+</p>
+${banner}
+<form method="POST" action="import" class="card" style="margin-top:16px">
+  <div class="field">
+    <label>CSV (uma linha por aluno)</label>
+    <textarea name="csv" rows="12" required placeholder="email,nome
+maria@exemplo.com,Maria Silva
+joao@exemplo.com,João Souza
+ana@exemplo.com"></textarea>
+    <p class="help">
+      Formato: <code>email,nome</code> ou <code>email;nome</code>. Header opcional.
+      Só o email é obrigatório. Duplicatas dentro do mesmo CSV são ignoradas.
+    </p>
+  </div>
+
+  <div class="field">
+    <label>Cursos pra liberar acesso</label>
+    <div class="checkbox-list">
+      ${courseOptions}
+    </div>
+    <p class="help">Por padrão todos os cursos estão marcados — desmarque os que não quer liberar.</p>
+  </div>
+
+  <div style="margin-top:16px">
+    <button type="submit">Importar alunos</button>
+  </div>
+</form>
+
+<style>
+  .checkbox-row { display:flex; align-items:center; gap:8px; padding:6px 0 }
+  .checkbox-row input { margin:0 }
+  .checkbox-list { background:#fff; border:1px solid #e5e5e5; border-radius:8px; padding:8px 12px }
+  textarea { width:100%; box-sizing:border-box; padding:10px; border:1px solid #ddd; border-radius:8px; font-family:monospace; font-size:13px; resize:vertical }
+</style>`;
+}
+
+function studentsImportResultHtml(args: {
+  summary: import("./lib/student-import.ts").ImportSummary;
+  parseErrors: import("./lib/student-import.ts").ImportError[];
+  selectedCourseNames: string[];
+  hadHeader: boolean;
+}): string {
+  const s = args.summary;
+  const courseList = args.selectedCourseNames.map(esc).join(", ");
+  const okCount = s.studentsUpserted;
+  const errCount = s.errors.length + args.parseErrors.length;
+
+  const parseErrRows = args.parseErrors.length
+    ? `<h3>Linhas ignoradas no CSV</h3>
+       <table>
+         <tr><th>Linha</th><th>Conteúdo</th><th>Motivo</th></tr>
+         ${args.parseErrors.slice(0, 50).map((e) => `
+           <tr><td>${e.line}</td><td><code>${esc(e.raw)}</code></td><td>${esc(e.reason)}</td></tr>
+         `).join("")}
+       </table>
+       ${args.parseErrors.length > 50 ? `<p class="help">+ ${args.parseErrors.length - 50} outras…</p>` : ""}`
+    : "";
+
+  const importErrRows = s.errors.length
+    ? `<h3>Erros durante a importação</h3>
+       <table>
+         <tr><th>Linha</th><th>Email</th><th>Motivo</th></tr>
+         ${s.errors.slice(0, 50).map((e) => `
+           <tr><td>${e.line ?? "-"}</td><td>${esc(e.email ?? "-")}</td><td>${esc(e.reason)}</td></tr>
+         `).join("")}
+       </table>`
+    : "";
+
+  return `
+<h1>Importação concluída</h1>
+<div class="stat-row">
+  <div class="stat ok"><div class="num">${okCount}</div><div class="label">Alunos importados</div></div>
+  <div class="stat"><div class="num">${s.accessGrants}</div><div class="label">Acessos concedidos</div></div>
+  <div class="stat"><div class="num">${s.mcpUsersUpserted}</div><div class="label">Identidades globais (mcp_users)</div></div>
+  <div class="stat ${errCount ? "err" : ""}"><div class="num">${errCount}</div><div class="label">Erros</div></div>
+</div>
+
+<p class="help" style="margin-top:16px">
+  Cursos liberados: <strong>${courseList || "—"}</strong>${args.hadHeader ? " · header detectado (1ª linha ignorada)" : ""}
+</p>
+
+${parseErrRows}
+${importErrRows}
+
+<div style="margin-top:24px">
+  <a href="import" class="btn">Importar outro lote</a>
+</div>
+
+<style>
+  .stat-row { display:flex; gap:12px; margin-top:16px; flex-wrap:wrap }
+  .stat { background:#fff; border:1px solid #e5e5e5; border-radius:8px; padding:16px 20px; min-width:140px }
+  .stat .num { font-size:28px; font-weight:600; color:#111 }
+  .stat .label { font-size:12px; color:#666; margin-top:4px }
+  .stat.ok .num { color:#15803d }
+  .stat.err .num { color:#b91c1c }
+  table { width:100%; border-collapse:collapse; margin-top:8px; font-size:13px }
+  table th, table td { padding:8px 10px; border-bottom:1px solid #eee; text-align:left }
+  table th { background:#f8f8f8; font-weight:500; color:#555 }
+  table code { background:#f3f3f3; padding:2px 4px; border-radius:3px; font-size:12px }
+  .btn { display:inline-block; padding:10px 16px; background:#111; color:#fff; border-radius:8px; text-decoration:none }
+</style>`;
+}
+
 // ----- Course detail + content ingest -------------------------------------
 
 interface ResolvedCourse {
@@ -770,6 +968,7 @@ function layoutHtml(args: {
     <nav>
       ${navItem("dashboard", "Dashboard", `/t/${slug}/admin`)}
       ${navItem("courses", "Cursos", `/t/${slug}/admin/courses`)}
+      ${navItem("students", "Alunos", `/t/${slug}/admin/students/import`)}
       ${navItem("integrations", "Integrações", `/t/${slug}/admin/integrations`)}
       ${navItem("plan", "Plano e Uso", `/t/${slug}/admin/plan`)}
     </nav>
@@ -1442,6 +1641,8 @@ export type AdminRouteMatch =
   | { type: "start-ingest"; courseSlug: string }
   | { type: "course-insights"; courseSlug: string }
   | { type: "plan" }
+  | { type: "students-import-get" }
+  | { type: "students-import-post" }
   | { type: "logout" };
 
 export function matchAdminRoute(suffix: string, method: string): AdminRouteMatch | null {
@@ -1456,6 +1657,8 @@ export function matchAdminRoute(suffix: string, method: string): AdminRouteMatch
   if (method === "POST" && path === "/integrations/panda")   return { type: "integrations-panda" };
   if (method === "GET"  && path === "/courses") return { type: "courses-get" };
   if (method === "POST" && path === "/courses") return { type: "courses-post" };
+  if (method === "GET"  && path === "/students/import") return { type: "students-import-get" };
+  if (method === "POST" && path === "/students/import") return { type: "students-import-post" };
   if (method === "GET"  && path === "/logout")  return { type: "logout" };
 
   // Course-scoped routes: /courses/:slug/...
@@ -1500,6 +1703,8 @@ export async function handleAdminRoute(
     case "start-ingest":        return startIngest(tenant, match.courseSlug, req, res);
     case "course-insights":     return courseInsights(tenant, match.courseSlug, req, res);
     case "plan":                return planPage(tenant, req, res);
+    case "students-import-get": return studentsImportGet(tenant, req, res);
+    case "students-import-post": return studentsImportPost(tenant, req, res);
     case "logout":              return logout(tenant, req, res);
   }
 }
