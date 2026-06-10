@@ -195,9 +195,32 @@ async function handleMcpRequest(args: {
     let transport = sessionId ? transports.get(sessionId) : undefined;
 
     if (!transport) {
+      // Phase 10.1 — session resilience. The MCP HTTP Streamable spec
+      // distinguishes between TWO miss-cases and the cure differs:
+      //
+      //   A) No Mcp-Session-Id sent + not an initialize call → 400.
+      //      The client never established a session and we can't help.
+      //
+      //   B) Mcp-Session-Id sent but unknown to us + not initialize → 404.
+      //      The session existed at some point (server restart wiped our
+      //      in-memory `transports` map) but doesn't anymore. Per spec,
+      //      the client treats 404 as "session expired" and AUTOMATICALLY
+      //      replays initialize → caches the new session-id → retries the
+      //      original request. End user never sees a disconnect.
+      //
+      // This is the difference between "user reconnects the connector
+      // after every deploy" and "deploys are invisible to users".
       if (!isInitializeRequest(body)) {
-        res.writeHead(400, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ jsonrpc: "2.0", error: { code: -32000, message: "No session — first request must be initialize" }, id: null }));
+        const status = sessionId ? 404 : 400;
+        const message = sessionId
+          ? "Session expired — please reinitialize"
+          : "No session — first request must be initialize";
+        res.writeHead(status, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({
+          jsonrpc: "2.0",
+          error: { code: -32000, message },
+          id: null,
+        }));
         return;
       }
       transport = new StreamableHTTPServerTransport({
@@ -220,8 +243,15 @@ async function handleMcpRequest(args: {
   }
 
   if (req.method === "GET" || req.method === "DELETE") {
-    if (!sessionId || !transports.has(sessionId)) {
-      res.writeHead(400).end("missing or invalid Mcp-Session-Id");
+    // Same spec rule applied to GET/DELETE: 400 if no session-id was sent
+    // (client is malformed); 404 if a stale session-id was sent (server
+    // restarted) so the client knows to reinitialize rather than error out.
+    if (!sessionId) {
+      res.writeHead(400).end("missing Mcp-Session-Id");
+      return;
+    }
+    if (!transports.has(sessionId)) {
+      res.writeHead(404).end("session expired");
       return;
     }
     await transports.get(sessionId)!.handleRequest(req, res);
