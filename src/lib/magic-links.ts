@@ -47,20 +47,29 @@ interface MagicLinkRow {
   consumed_at: string | null;
 }
 
-/** Consume a magic link, returning its claims (or null on expiry / already
- *  consumed). Single-use. */
+/**
+ * Consume a magic link, returning its claims (or null on expiry / already
+ * consumed). Single-use.
+ *
+ * Phase 9.3: this is now atomic. The conditional UPDATE filters on
+ * `consumed_at=is.null` so only the FIRST concurrent request matches.
+ * PostgREST returns the affected row(s) via Prefer: return=representation,
+ * so an empty array means we lost the race (or the row didn't exist /
+ * was already consumed / was already expired).
+ */
 export async function consumeMagicLink(token: string): Promise<MagicLinkClaims | null> {
   const hash = sha256(token);
-  const row = await sb.selectOne<MagicLinkRow>(
+  const nowIso = new Date().toISOString();
+  // Atomic compare-and-set: only update if still unconsumed AND not expired.
+  // PostgREST URL filters: token_hash=eq.HASH, consumed_at=is.null, expires_at=gt.NOW
+  const updated = await sb.update<MagicLinkRow>(
     "magic_links",
-    `token_hash=eq.${encodeURIComponent(hash)}&select=*`,
+    `token_hash=eq.${encodeURIComponent(hash)}&consumed_at=is.null&expires_at=gt.${encodeURIComponent(nowIso)}`,
+    { consumed_at: nowIso },
+    { returning: "representation" },
   );
+  const row = updated[0];
   if (!row) return null;
-  if (row.consumed_at) return null;
-  if (new Date(row.expires_at).getTime() < Date.now()) return null;
-  await sb.update("magic_links", `token_hash=eq.${encodeURIComponent(hash)}`, {
-    consumed_at: new Date().toISOString(),
-  });
   return {
     tenantId: row.tenant_id,
     email: row.email,
