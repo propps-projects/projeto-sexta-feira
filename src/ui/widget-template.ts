@@ -16,6 +16,19 @@
  * The widget reads `structuredContent.embedUrl` from `window.openai.toolOutput`
  * and points the iframe at it.
  */
+/**
+ * Inject inline player data into the Apps SDK widget HTML. Phase 10 stateless
+ * URI: each play_lesson call returns a unique URI with data encoded; the
+ * resource read callback decodes the data and calls this to pre-hydrate the
+ * iframe — surviving MCP session resets after a deploy.
+ */
+export function injectPlayerDataApps(html: string, data: unknown): string {
+  if (!data) return html;
+  const safe = JSON.stringify(data).replace(/</g, "\\u003c");
+  const tag = `<script>window._playerData = ${safe};</script>`;
+  return html.replace("<script>", `${tag}\n  <script>`);
+}
+
 export function buildPlayerWidgetHtml(): string {
   return `<!doctype html>
 <html lang="pt-BR">
@@ -88,10 +101,19 @@ export function buildPlayerWidgetHtml(): string {
         frame.src = buildSrc(data);
       }
 
+      // Data source 0 (Phase 10): inline data injected by the resource read
+      // callback via window._playerData. Survives MCP session resets — does
+      // not depend on the host re-dispatching postMessage/toolOutput after
+      // a deploy.
+      var _rendered = false;
+      function renderOnce(d) { if (_rendered) return; _rendered = true; render(d); }
+      if (window._playerData) renderOnce(window._playerData);
+
       // Data source 1: ChatGPT Apps SDK — window.openai.toolOutput is a sync handle
       function tryRender() {
+        if (_rendered) return true;
         if (window.openai && window.openai.toolOutput) {
-          render(window.openai.toolOutput);
+          renderOnce(window.openai.toolOutput);
           return true;
         }
         return false;
@@ -126,7 +148,7 @@ export function buildPlayerWidgetHtml(): string {
                 || (tool.result && tool.result.structuredContent)
                 || (tool.params && tool.params.structuredContent)
                 || tool;
-        if (data && (data.embedUrl || data.title)) render(data);
+        if (data && (data.embedUrl || data.title)) renderOnce(data);
       }, false);
     })();
   </script>

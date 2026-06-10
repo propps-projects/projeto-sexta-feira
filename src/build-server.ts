@@ -1,4 +1,4 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { createUIResource } from "@mcp-ui/server";
 import { z } from "zod";
 import { loadLessons, findLesson, formatDuration, formatTimestamp } from "./lib/lessons.ts";
@@ -6,8 +6,14 @@ import { loadTranscript, excerptFor } from "./lib/transcripts.ts";
 import { openDb, searchChunks } from "./lib/store.ts";
 import { embedQuery } from "./lib/embeddings.ts";
 import { type AdapterMode } from "./ui/player.ts";
-import { buildPlayerWidgetHtml } from "./ui/widget-template.ts";
-import { buildPlayerWidgetHtmlVideo } from "./ui/widget-template-video.ts";
+import { buildPlayerWidgetHtml, injectPlayerDataApps } from "./ui/widget-template.ts";
+import { buildPlayerWidgetHtmlVideo, injectPlayerData } from "./ui/widget-template-video.ts";
+import {
+  buildPlayerWidgetUri,
+  parsePlayerDataFromUri,
+  PLAYER_WIDGET_URI_TEMPLATE,
+  PLAYER_WIDGET_URI_LEGACY,
+} from "./lib/widget-uri.ts";
 import { type Tenant } from "./lib/tenant.ts";
 import { resolveCourse, type Course } from "./lib/courses.ts";
 import { listLessonsForCourse, findLessonInCourse, excerptFromTranscript } from "./lib/lessons-pg.ts";
@@ -17,13 +23,21 @@ import { recordPlayLesson, getProgressForCourse } from "./lib/student-progress.t
 import { checkAndCount } from "./lib/rate-limit.ts";
 import type { McpUser, AccessibleCourse } from "./lib/mcp-users.ts";
 
-// ChatGPT Apps SDK widget URI for the lesson player. Registered as an MCP
-// resource on /mcp-gpt; referenced from play_lesson's `openai/outputTemplate`.
-// NOTE: bump the version suffix (vN) whenever the widget HTML changes in a way
-// ChatGPT must re-fetch — the Apps SDK caches widget templates by URI, so the
-// same URI keeps serving a stale cached widget. v2: dropped the GPT_USE_VIDEO
-// <video> path; ChatGPT is now always the iframe→Panda widget.
-const PLAYER_WIDGET_URI = "ui://widget/lesson-player-v2.html";
+// Phase 10 — stateless widget URIs.
+//
+// Each play_lesson call returns a UNIQUE per-call URI of the form
+//   ui://widget/lesson-player-v3/<base64url-of-json-data>.html
+// resolved by a ResourceTemplate. The resource read callback decodes the
+// data segment and injects it inline as window._playerData so the widget
+// hydrates without depending on the host re-dispatching postMessage.
+// Survives MCP session resets after a deploy: old conversations re-fetch
+// the same URI on the new server process and get the same HTML.
+//
+// The static v2 URI is still registered as a back-compat shim for conversations
+// produced before Phase 10 — it returns the widget HTML without inline data,
+// which falls back to the postMessage/openai.toolOutput hydration path that
+// the old hosts used.
+const PLAYER_WIDGET_URI_V2 = PLAYER_WIDGET_URI_LEGACY;
 
 /**
  * Builds an McpServer with all tools registered. Used by both the stdio entry
@@ -149,50 +163,80 @@ export function buildServer(
   const widgetHtml = adapterMode === "appsSdk"
     ? buildPlayerWidgetHtml()
     : buildPlayerWidgetHtmlVideo();
+  // Wrap once for mime/headers; reuse for both v2 (legacy static) and v3
+  // (template) registrations. The HTML text is the same shell — v3 also
+  // gets an inline `window._playerData` injected at read time.
   const widgetWrapped = createUIResource({
-    uri: PLAYER_WIDGET_URI,
+    uri: PLAYER_WIDGET_URI_V2,
     content: { type: "rawHtml", htmlString: widgetHtml },
     encoding: "text",
     adapters: adapterMode === "appsSdk"
       ? { appsSdk: { enabled: true } }
       : { mcpApps: { enabled: true } },
-    // Hint to the host how much space the widget needs. Without this Claude
-    // collapses the iframe to a thin strip; with it the player gets enough
-    // vertical room for the 16:9 video.
     uiMetadata: { "preferred-frame-size": ["100%", "480px"] },
   });
   const widgetMime = widgetWrapped.resource.mimeType;
   const widgetText = (widgetWrapped.resource as { text: string }).text;
+  const injectForAdapter = adapterMode === "appsSdk" ? injectPlayerDataApps : injectPlayerData;
 
-  server.registerResource(
-    "lesson-player",
-    PLAYER_WIDGET_URI,
-    {
-      title: "Player de Aula",
-      mimeType: widgetMime,
-      _meta: {
-        "openai/widgetDescription": "Player de vídeo da aula do curso, com deep-link opcional para timestamp.",
-        ...(widgetDomain ? { "openai/widgetDomain": widgetDomain } : {}),
-      },
+  const widgetMeta = {
+    title: "Player de Aula",
+    mimeType: widgetMime,
+    _meta: {
+      "openai/widgetDescription": "Player de vídeo da aula do curso, com deep-link opcional para timestamp.",
+      ...(widgetDomain ? { "openai/widgetDomain": widgetDomain } : {}),
     },
+  } as const;
+
+  const widgetContentMeta = {
+    ui: { csp: widgetCsp },
+    "openai/widgetCSP": {
+      connect_domains: widgetCsp.connectDomains,
+      resource_domains: widgetCsp.resourceDomains,
+      frame_domains: widgetCsp.frameDomains,
+      redirect_domains: [],
+    },
+  };
+
+  // v2 (legacy static URI) — back-compat for conversations created BEFORE
+  // Phase 10. Returns the widget HTML with no inline data; the host falls
+  // back to its old postMessage/openai.toolOutput hydration path.
+  server.registerResource(
+    "lesson-player-v2",
+    PLAYER_WIDGET_URI_V2,
+    widgetMeta,
     async (uri) => ({
       contents: [{
         uri: uri.toString(),
         mimeType: widgetMime,
         text: widgetText,
-        _meta: {
-          // Standard MCP Apps CSP (also read by ChatGPT Apps SDK).
-          ui: { csp: widgetCsp },
-          // Legacy snake_case kept as compatibility belt for older clients.
-          "openai/widgetCSP": {
-            connect_domains: widgetCsp.connectDomains,
-            resource_domains: widgetCsp.resourceDomains,
-            frame_domains: widgetCsp.frameDomains,
-            redirect_domains: [],
-          },
-        },
+        _meta: widgetContentMeta,
       }],
     }),
+  );
+
+  // v3 (stateless template) — new conversations. Each play_lesson call
+  // returns a URI of the form `ui://widget/lesson-player-v3/<base64url>.html`
+  // and this read callback decodes the base64 data, injects it as
+  // `window._playerData`, and returns the hydrated HTML. The widget then
+  // renders immediately on first paint — no postMessage required, no
+  // dependence on the original MCP session still being alive on the server.
+  server.registerResource(
+    "lesson-player-v3",
+    new ResourceTemplate(PLAYER_WIDGET_URI_TEMPLATE, { list: undefined }),
+    widgetMeta,
+    async (uri) => {
+      const data = parsePlayerDataFromUri(uri.toString());
+      const hydrated = injectForAdapter(widgetText, data);
+      return {
+        contents: [{
+          uri: uri.toString(),
+          mimeType: widgetMime,
+          text: hydrated,
+          _meta: widgetContentMeta,
+        }],
+      };
+    },
   );
 
   // ---------------------------------------------------------------------------
@@ -652,11 +696,18 @@ export function buildServer(
       //   • ChatGPT Apps SDK      → `_meta["openai/outputTemplate"]`
       //
       // We declare both. The host honors whichever it understands.
+      // Tool-level _meta points to the LEGACY v2 URI for two reasons:
+      //   1. ChatGPT Apps SDK caches widget HTML by `openai/outputTemplate`
+      //      URI — a per-call URI would defeat the cache and break the iframe
+      //      template lookup. v2 is stable.
+      //   2. Tool metadata is a class-level template hint, not a per-call
+      //      ref. The per-call URI with embedded data is set on the result
+      //      below via `_meta.ui.resourceUri`.
       _meta: {
-        ui: { resourceUri: PLAYER_WIDGET_URI },
+        ui: { resourceUri: PLAYER_WIDGET_URI_V2 },
         ...(adapterMode === "appsSdk"
           ? {
-              "openai/outputTemplate": PLAYER_WIDGET_URI,
+              "openai/outputTemplate": PLAYER_WIDGET_URI_V2,
               "openai/toolInvocation/invoking": "Carregando aula...",
               "openai/toolInvocation/invoked": "Aula carregada",
               "openai/widgetAccessible": true,
@@ -731,13 +782,33 @@ export function buildServer(
           startSec: startSec ?? 0,
         });
       }
+      // Phase 10: per-call URI carries the render data inline so the widget
+      // hydrates even after the original MCP session is gone (deploy reset).
+      const perCallUri = buildPlayerWidgetUri({
+        hlsUrl: structuredContent.hlsUrl,
+        embedUrl: structuredContent.embedUrl,
+        title: structuredContent.title,
+        id: structuredContent.id,
+        lessonNumber: structuredContent.lessonNumber,
+        ...(typeof structuredContent.startSec === "number"
+          ? { startSec: structuredContent.startSec }
+          : {}),
+      });
       return {
         content: [{ type: "text", text: label }],
         structuredContent,
         _meta: {
-          ui: { resourceUri: PLAYER_WIDGET_URI },
+          // Result-level pointer → the stateless v3 URI with embedded data.
+          // Hosts that honor `_meta.ui.resourceUri` (Claude MCP Apps) will
+          // resolve THIS URI and render the hydrated HTML directly.
+          ui: { resourceUri: perCallUri },
           ...(adapterMode === "appsSdk"
-            ? { "openai/outputTemplate": PLAYER_WIDGET_URI }
+            ? {
+                // ChatGPT Apps SDK template lookup: keep the static v2 URI
+                // (it caches by template). The structuredContent above still
+                // gets posted to the widget via window.openai.toolOutput.
+                "openai/outputTemplate": PLAYER_WIDGET_URI_V2,
+              }
             : {}),
         },
       };

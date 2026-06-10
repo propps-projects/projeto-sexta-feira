@@ -27,6 +27,23 @@ function hlsJsSource(): string {
   return _hlsJsSource;
 }
 
+/**
+ * Inject inline player data into the widget HTML. Used by the v3 (stateless)
+ * resource template so each per-call URI returns HTML that already contains
+ * its render data — no postMessage required. Returns the HTML unchanged if
+ * `data` is null (legacy v2 path).
+ */
+export function injectPlayerData(html: string, data: unknown): string {
+  if (!data) return html;
+  // JSON.stringify never produces `</script>`, so this can't break out of
+  // the script tag — but we still escape `<` to be defensive against future
+  // payload sources (e.g. raw user-supplied titles).
+  const safe = JSON.stringify(data).replace(/</g, "\\u003c");
+  const tag = `<script>window._playerData = ${safe};</script>`;
+  // Inject BEFORE the existing scripts so they see the value on first run.
+  return html.replace("<script>", `${tag}\n  <script>`);
+}
+
 export function buildPlayerWidgetHtmlVideo(): string {
   return `<!doctype html>
 <html lang="pt-BR">
@@ -104,6 +121,13 @@ export function buildPlayerWidgetHtmlVideo(): string {
         }
       }
 
+      // Data source 0 (Phase 10): inline data injected by the resource read
+      // callback via window._playerData. Survives MCP session resets — does
+      // not depend on the host re-dispatching postMessage after a deploy.
+      if (window._playerData) {
+        render(window._playerData);
+      }
+
       // Data source 1: ChatGPT Apps SDK (not relevant here, but harmless)
       function tryRender() {
         if (window.openai && window.openai.toolOutput) {
@@ -112,10 +136,10 @@ export function buildPlayerWidgetHtmlVideo(): string {
         }
         return false;
       }
-      if (!tryRender()) {
+      if (!bound && !tryRender()) {
         var tries = 0;
         var t = setInterval(function() {
-          if (tryRender() || ++tries > 20) clearInterval(t);
+          if (bound || tryRender() || ++tries > 20) clearInterval(t);
         }, 100);
       }
 
