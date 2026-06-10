@@ -83,7 +83,8 @@ function startOfMonthIso(): string {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)).toISOString();
 }
 
-export async function getUsage(tenantId: string, plan: Plan): Promise<Usage> {
+export async function getUsage(tenantId: string, plan: Plan, tenantStatus: string = "active"): Promise<Usage> {
+  const limits = effectiveLimits(plan, tenantStatus);
   // Course count
   const courseRows = await sb.select<{ id: string }>(
     "courses",
@@ -118,13 +119,13 @@ export async function getUsage(tenantId: string, plan: Plan): Promise<Usage> {
   const kbBytes = materials.reduce((sum, m) => sum + (m.size_bytes ?? 0), 0);
 
   return {
-    courses: { used: courseRows.length, limit: plan.maxCourses },
+    courses: { used: courseRows.length, limit: limits.maxCourses },
     transcribeMinutesThisMonth: {
       used: Math.round(transcribeMinutes * 10) / 10,
-      limit: plan.transcribeHoursMonth != null ? plan.transcribeHoursMonth * 60 : null,
+      limit: limits.transcribeHoursMonth != null ? limits.transcribeHoursMonth * 60 : null,
     },
-    activeStudents: { used: uniqueStudents.size, limit: plan.activeStudentsMonth },
-    kbBytes: { used: kbBytes, limit: plan.kbSizeBytes },
+    activeStudents: { used: uniqueStudents.size, limit: limits.activeStudentsMonth },
+    kbBytes: { used: kbBytes, limit: limits.kbSizeBytes },
   };
 }
 
@@ -148,6 +149,43 @@ export type EnforceAction =
   | { kind: "upload_kb"; bytes: number };
 
 /**
+ * Trial limits — applied whenever tenant.status === 'trial' regardless of
+ * which plan they picked at signup. Trial lasts 7 days (TRIAL_DURATION_DAYS
+ * in public-router signup). After webhook payment success, status flips to
+ * 'active' and the chosen plan's full limits apply.
+ *
+ * Why a flag instead of a separate `trial` plan id: keeps the link to the
+ * paid plan visible in the dashboard ("Trial of Pro") and avoids a no-op
+ * plan migration at the moment of conversion.
+ */
+export const TRIAL_LIMITS = {
+  maxCourses: 1,
+  transcribeHoursMonth: 2,
+  activeStudentsMonth: 10,
+  kbSizeBytes: 50 * 1024 * 1024, // 50MB
+} as const;
+export const TRIAL_DURATION_DAYS = 7;
+
+/** Returns the effective limits — trial caps when status='trial', otherwise
+ *  the plan's own limits. Used by both getUsage(...) and enforceQuota(...). */
+function effectiveLimits(plan: Plan, tenantStatus: string): {
+  maxCourses: number | null;
+  transcribeHoursMonth: number | null;
+  activeStudentsMonth: number | null;
+  kbSizeBytes: number | null;
+} {
+  if (tenantStatus === "trial") {
+    return TRIAL_LIMITS;
+  }
+  return {
+    maxCourses: plan.maxCourses,
+    transcribeHoursMonth: plan.transcribeHoursMonth,
+    activeStudentsMonth: plan.activeStudentsMonth,
+    kbSizeBytes: plan.kbSizeBytes,
+  };
+}
+
+/**
  * Hard enforcement before a destructive/billable action. Throws on overflow.
  * Resolves the plan from the tenant and reuses getUsage's queries so that
  * the dashboard and enforcement agree.
@@ -161,7 +199,10 @@ export async function enforceQuota(
   if (!plan) {
     throw new QuotaExceededError("no_plan", `Plan ${planId} not found`);
   }
-  const usage = await getUsage(tenantId, plan);
+  // Read the tenant's current status so trial caps win over plan caps
+  const t = await sb.selectOne<{ status: string }>("tenants", `id=eq.${tenantId}&select=status`);
+  const status = t?.status ?? "active";
+  const usage = await getUsage(tenantId, plan, status);
 
   switch (action.kind) {
     case "add_course": {

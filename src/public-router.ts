@@ -124,7 +124,8 @@ async function signupPost(req: IncomingMessage, res: ServerResponse): Promise<vo
     contact_document: documentRaw,
     plan_id: planId,
     status: "trial",
-    trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+    // 7-day trial with reduced caps applied via TRIAL_LIMITS in plans.ts
+    trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
   });
   const tenant = tenantRow[0];
   await inviteAdmin({ tenantId: tenant.id, email, role: "owner" });
@@ -407,7 +408,7 @@ const FOOTER = `
     <div class="inner">
       <div class="brand-col">
         <img src="/brand/logo-black.svg" alt="Askine">
-        <p>Tutor agêntico via MCP pra infoprodutores brasileiros. Operado pela Propps Media.</p>
+        <p>Tutor agêntico via MCP pra infoprodutores brasileiros. Operado pela Askine LLC.</p>
       </div>
       <div>
         <h5>Produto</h5>
@@ -423,7 +424,7 @@ const FOOTER = `
         <ul>
           <li><a href="/about">Sobre</a></li>
           <li><a href="/contact">Contato</a></li>
-          <li><a href="mailto:rafael@infosaas.co">rafael@infosaas.co</a></li>
+          <li><a href="mailto:support@askine.cc">support@askine.cc</a></li>
         </ul>
       </div>
       <div>
@@ -435,8 +436,8 @@ const FOOTER = `
       </div>
     </div>
     <div class="legal">
-      <div>© 2026 Propps Media · CNPJ 35.735.278/0001-91</div>
-      <div>Askine é marca operada pela Propps Media</div>
+      <div>© 2026 Askine LLC</div>
+      <div>Askine é marca operada pela Askine LLC</div>
     </div>
   </footer>`;
 
@@ -585,7 +586,7 @@ function signupHtml(args: { plans: Array<Pick<PlanPublic, "id" | "name" | "month
     <span class="pub-eyebrow" style="background:#fff8e6;color:#8a5a00;border-color:#f0dca0"><span class="dot" style="background:#f59e0b"></span>Em preparação</span>
     <h1 class="pub-display">Checkout em preparação.</h1>
     <p class="pub-lead pub-lead-center">Os planos ainda estão sendo configurados no nosso provedor de pagamentos. Volta em alguns minutos, ou manda email e eu te coloco manualmente.</p>
-    <div style="margin-top:32px"><a class="pub-btn lg" href="mailto:rafael@infosaas.co">Falar comigo</a></div>
+    <div style="margin-top:32px"><a class="pub-btn lg" href="mailto:support@askine.cc">Falar comigo</a></div>
   </div>
 </section>`,
     });
@@ -1061,7 +1062,7 @@ function legalPage(res: ServerResponse, kind: "privacy" | "terms" | "contact" | 
 <article class="pub-article">
   <h1>${esc(title)}</h1>
   ${body}
-  <div class="meta">Última atualização: 09 de junho de 2026 · Askine, marca operada por <strong>Propps Media</strong> (CNPJ 35.735.278/0001-91).</div>
+  <div class="meta">Última atualização: 09 de junho de 2026 · <strong>Askine LLC</strong>.</div>
 </article>
 `,
   }));
@@ -1069,7 +1070,7 @@ function legalPage(res: ServerResponse, kind: "privacy" | "terms" | "contact" | 
 
 function privacyHtml(): string {
   return `
-    <p>Esta política descreve como a Askine, marca operada pela Propps Media (CNPJ 35.735.278/0001-91), coleta, usa e protege dados pessoais. Estamos em conformidade com a Lei Geral de Proteção de Dados (LGPD — Lei 13.709/2018).</p>
+    <p>Esta política descreve como a Askine LLC, coleta, usa e protege dados pessoais. Estamos em conformidade com a Lei Geral de Proteção de Dados (LGPD — Lei 13.709/2018).</p>
 
     <h2>1. Dados coletados</h2>
     <h3>1.1 Do infoprodutor (cliente pagante)</h3>
@@ -1140,7 +1141,7 @@ function privacyHtml(): string {
     </ul>
 
     <h2>7. Encarregado de Dados (DPO)</h2>
-    <p>Rafael Almeida Souza — <code>rafael@infosaas.co</code>. Para solicitações formais LGPD, use <a href="/contact" style="color:#3b82f6">/contact</a>.</p>
+    <p>Rafael Almeida Souza — <code>support@askine.cc</code>. Para solicitações formais LGPD, use <a href="/contact" style="color:#3b82f6">/contact</a>.</p>
 
     <h2>8. Alterações nesta política</h2>
     <p>Mudanças materiais serão comunicadas com 30 dias de antecedência ao email cadastrado de cada infoprodutor. A data de última atualização aparece no rodapé.</p>
@@ -1149,7 +1150,7 @@ function privacyHtml(): string {
 
 function termsHtml(): string {
   return `
-    <p>Estes termos regem o uso da plataforma <strong>Askine</strong>, marca operada pela <strong>Propps Media Ltda</strong> (CNPJ 35.735.278/0001-91). Ao criar uma conta ou usar o serviço, você concorda com estes termos.</p>
+    <p>Estes termos regem o uso da plataforma <strong>Askine</strong>, marca operada pela <strong>Askine LLC</strong>. Ao criar uma conta ou usar o serviço, você concorda com estes termos.</p>
 
     <h2>1. Definições</h2>
     <ul>
@@ -1217,7 +1218,7 @@ function termsHtml(): string {
     <p>Podemos atualizar estes termos. Mudanças materiais são comunicadas com 30 dias de antecedência ao email cadastrado. Continuar usando o serviço após o prazo significa aceitar a nova versão.</p>
 
     <h2>10. Lei aplicável e foro</h2>
-    <p>Estes termos são regidos pela legislação brasileira. Fica eleito o foro da Comarca onde a Propps Media tem sede, com renúncia a qualquer outro, exceto se a legislação consumerista determinar foro do consumidor.</p>
+    <p>Estes termos são regidos pela legislação brasileira. Fica eleito o foro da Comarca onde a Askine LLC tem sede, com renúncia a qualquer outro, exceto se a legislação consumerista determinar foro do consumidor.</p>
   `;
 }
 
@@ -1228,36 +1229,32 @@ function contactHtml(): string {
     <div class="contact-card">
       <h3 style="margin-top:0">📧 Suporte geral</h3>
       <p>Dúvidas sobre uso da plataforma, integrações, problemas técnicos.</p>
-      <p><a href="mailto:rafael@infosaas.co">rafael@infosaas.co</a></p>
+      <p><a href="mailto:support@askine.cc">support@askine.cc</a></p>
       <p style="color:#94a3b8;font-size:13px">Respondo em até 1 dia útil.</p>
     </div>
 
     <div class="contact-card">
       <h3 style="margin-top:0">💼 Vendas / Enterprise</h3>
       <p>Volume alto, SLA negociado, integrações próprias, contrato dedicado.</p>
-      <p><a href="/enterprise">Formulário Enterprise</a> · <a href="mailto:rafael@infosaas.co">rafael@infosaas.co</a></p>
+      <p><a href="/enterprise">Formulário Enterprise</a> · <a href="mailto:support@askine.cc">support@askine.cc</a></p>
     </div>
 
     <div class="contact-card">
       <h3 style="margin-top:0">🔒 Privacidade / LGPD</h3>
       <p>Solicitações de acesso, correção, exclusão de dados pessoais. Encarregado de Dados (DPO): Rafael Almeida Souza.</p>
-      <p><a href="mailto:rafael@infosaas.co?subject=LGPD%20%E2%80%94%20Solicita%C3%A7%C3%A3o">rafael@infosaas.co</a> (assunto: "LGPD")</p>
+      <p><a href="mailto:support@askine.cc?subject=LGPD%20%E2%80%94%20Solicita%C3%A7%C3%A3o">support@askine.cc</a> (assunto: "LGPD")</p>
       <p style="color:#94a3b8;font-size:13px">Atendimento conforme Art. 18 da LGPD em até 15 dias.</p>
     </div>
 
     <div class="contact-card">
       <h3 style="margin-top:0">🚨 Incidentes de segurança</h3>
       <p>Vulnerabilidade encontrada, vazamento de dados, suspeita de fraude.</p>
-      <p><a href="mailto:rafael@infosaas.co?subject=Security">rafael@infosaas.co</a> (assunto: "Security")</p>
+      <p><a href="mailto:support@askine.cc?subject=Security">support@askine.cc</a> (assunto: "Security")</p>
       <p style="color:#94a3b8;font-size:13px">Prioridade máxima. Damos retorno em até 24h.</p>
     </div>
 
     <h2>Empresa</h2>
-    <p>
-      <strong>Propps Media Ltda</strong><br>
-      CNPJ: 35.735.278/0001-91<br>
-      Marca: <strong>Askine</strong>
-    </p>
+    <p><strong>Askine LLC</strong></p>
   `;
 }
 
@@ -1292,7 +1289,7 @@ function aboutHtml(): string {
     </ul>
 
     <h2>Quem mantém</h2>
-    <p><a href="https://www.linkedin.com/in/rafaelalmeidasouza" style="color:#3b82f6" rel="nofollow">Rafael Almeida Souza</a>, fundador da <strong>Propps Media</strong> (CNPJ 35.735.278/0001-91). Brasileiro, engenheiro solo, técnico em todas as camadas.</p>
+    <p><a href="https://www.linkedin.com/in/rafaelalmeidasouza" style="color:#3b82f6" rel="nofollow">Rafael Almeida Souza</a>, fundador da <strong>Askine LLC</strong>. Brasileiro, engenheiro solo, técnico em todas as camadas.</p>
 
     <h2>Onde estamos</h2>
     <ul>
@@ -1328,8 +1325,8 @@ async function enterprisePost(req: IncomingMessage, res: ServerResponse): Promis
   // Send via Resend to the sales inbox. We don't store lead data in the
   // DB yet — Phase 6 may add a `leads` table; for now an email + Slack
   // (if wired) is enough not to lose anyone.
-  const SALES_INBOX = process.env.SALES_INBOX || "rafael@infosaas.co";
-  const from = process.env.RESEND_FROM || "Askine <login@update.infosaas.co>";
+  const SALES_INBOX = process.env.SALES_INBOX || "support@askine.cc";
+  const from = process.env.RESEND_FROM || "Askine <login@askine.cc>";
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     console.error("[enterprise] RESEND_API_KEY unset — lead lost:", { name, email, company });
@@ -1370,7 +1367,7 @@ async function enterprisePost(req: IncomingMessage, res: ServerResponse): Promis
 function enterpriseHtml(args: { sent: boolean; error?: string }): string {
   const errors: Record<string, string> = {
     missing_fields: "Preencha nome, email e empresa.",
-    send_failed: "Não foi possível enviar agora. Tenta de novo ou manda direto para rafael@infosaas.co.",
+    send_failed: "Não foi possível enviar agora. Tenta de novo ou manda direto para support@askine.cc.",
   };
   const errMsg = args.error ? errors[args.error] ?? "Erro." : null;
   return pageShell({

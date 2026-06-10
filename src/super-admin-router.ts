@@ -200,12 +200,21 @@ async function plansList(req: IncomingMessage, res: ServerResponse): Promise<voi
   const sess = await requireSuperAdmin(req, res);
   if (!sess) return;
   const plans = await sb.select<PlanRowFull>("plans", "select=*&order=display_order.asc");
+  // Count active tenants for VPS cost rationing in the margin calculator
+  const activeTenants = await sb.select<{ id: string }>(
+    "tenants", "status=in.(active,trial)&select=id",
+  );
   const q = getQuery(req);
   html(res, 200, layout({
     title: "Plans",
     activeNav: "plans",
     session: sess,
-    body: plansHtml({ plans, message: q.get("msg") ?? undefined }),
+    body: plansHtml({
+      plans,
+      message: q.get("msg") ?? undefined,
+      activeTenantCount: Math.max(activeTenants.length, 1),
+      activeTabId: q.get("tab") ?? plans[0]?.id ?? "",
+    }),
   }));
 }
 
@@ -369,7 +378,7 @@ function loginHtml(args: { error?: string; sent: boolean }): string {
   ${errMsg ? `<div class="msg error">${esc(errMsg)}</div>` : ""}
   <form method="POST" action="/super-admin/login">
     <label>Email</label>
-    <input type="email" name="email" autofocus required placeholder="voce@infosaas.co">
+    <input type="email" name="email" autofocus required placeholder="voce@askine.cc">
     <div style="margin-top:16px"><button type="submit">Enviar link</button></div>
   </form>
 </div>`,
@@ -459,7 +468,99 @@ ${msgText ? `<div class="msg ${msgKind}">${esc(msgText)}</div>` : ""}
 </div>`;
 }
 
-function plansHtml(args: { plans: PlanRowFull[]; message?: string }): string {
+// Margin calculator constants — tweak as cost structure changes
+const COST_WHISPER_BRL_PER_HOUR = 2.16;   // ~$0.006/min × USD 6
+const COST_STORAGE_BRL_PER_GB = 0.10;     // Supabase Storage rough estimate
+const NF_PERCENT = 0.06;                  // Simples Nacional 6%
+const VPS_FIXED_BRL_PER_MONTH = 200;      // EasyPanel / equivalent
+
+interface MarginBreakdown {
+  whisperCost: number;
+  storageCost: number;
+  nfCost: number;
+  vpsCost: number;
+  totalCost: number;
+  margin: number;
+  marginPct: number;
+}
+
+function calcMargin(args: {
+  priceBrl: number | null;
+  hoursMonth: number | null;
+  kbBytes: number | null;
+  activeTenantCount: number;
+}): MarginBreakdown {
+  const price = Number(args.priceBrl ?? 0);
+  const hours = Number(args.hoursMonth ?? 0);
+  const gb = Number(args.kbBytes ?? 0) / (1024 ** 3);
+  const whisperCost = Math.round(hours * COST_WHISPER_BRL_PER_HOUR * 100) / 100;
+  const storageCost = Math.round(gb * COST_STORAGE_BRL_PER_GB * 100) / 100;
+  const nfCost = Math.round(price * NF_PERCENT * 100) / 100;
+  const vpsCost = Math.round((VPS_FIXED_BRL_PER_MONTH / args.activeTenantCount) * 100) / 100;
+  const totalCost = Math.round((whisperCost + storageCost + nfCost + vpsCost) * 100) / 100;
+  const margin = Math.round((price - totalCost) * 100) / 100;
+  const marginPct = price > 0 ? Math.round((margin / price) * 1000) / 10 : 0;
+  return { whisperCost, storageCost, nfCost, vpsCost, totalCost, margin, marginPct };
+}
+
+function fmtBrl(n: number): string {
+  return `R$ ${n.toFixed(2).replace(".", ",")}`;
+}
+
+function planTabHtml(p: PlanRowFull, args: { activeTenantCount: number; isActive: boolean }): string {
+  const m = calcMargin({
+    priceBrl: p.monthly_price_brl != null ? Number(p.monthly_price_brl) : null,
+    hoursMonth: p.transcribe_hours_month != null ? Number(p.transcribe_hours_month) : null,
+    kbBytes: p.kb_size_bytes != null ? Number(p.kb_size_bytes) : null,
+    activeTenantCount: args.activeTenantCount,
+  });
+  const marginColor = m.marginPct >= 50 ? "var(--ax-success)" : m.marginPct >= 25 ? "var(--ax-warn)" : "var(--ax-danger)";
+  return `
+<div class="ax-card" style="display:${args.isActive ? "block" : "none"}" data-plan-panel="${esc(p.id)}">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+    <h2 style="margin:0">${esc(p.name)}</h2>
+    <code style="font-size:12px;color:var(--ax-text-mute)">${esc(p.id)}</code>
+    ${p.validapay_price_id
+      ? `<span class="ax-badge" style="background:#e8f5e9;color:#1e6f3e">● ValidaPay sync</span>`
+      : `<span class="ax-badge" style="background:#fff4d6;color:#8a5a00">○ não sincronizado</span>`}
+  </div>
+  ${p.validapay_price_id ? `<p class="help" style="margin:0 0 18px;font-family:ui-monospace,monospace;font-size:12px">price ${esc(p.validapay_price_id)}</p>` : ""}
+
+  <form method="POST" action="/super-admin/plans/${esc(p.id)}" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px">
+    <div><label>Nome</label><input name="name" value="${esc(p.name)}"></div>
+    <div><label>Preço BRL/mês</label><input name="monthly_price_brl" type="number" step="0.01" value="${p.monthly_price_brl ?? ""}" placeholder="∞ se vazio"></div>
+    <div><label>Max cursos</label><input name="max_courses" type="number" value="${p.max_courses ?? ""}" placeholder="∞"></div>
+    <div><label>Transcrição h/mês</label><input name="transcribe_hours_month" type="number" step="0.1" value="${p.transcribe_hours_month ?? ""}" placeholder="∞"></div>
+    <div><label>Alunos ativos/mês</label><input name="active_students_month" type="number" value="${p.active_students_month ?? ""}" placeholder="∞"></div>
+    <div><label>KB bytes</label><input name="kb_size_bytes" type="number" value="${p.kb_size_bytes ?? ""}" placeholder="∞"></div>
+    <div><label>Ordem display</label><input name="display_order" type="number" value="${p.display_order}"></div>
+    <div><label>Público?</label><select name="is_public"><option value="true"${p.is_public ? " selected" : ""}>Sim</option><option value="false"${!p.is_public ? " selected" : ""}>Não</option></select></div>
+    <div style="grid-column:1/-1;display:flex;gap:8px;justify-content:flex-end;margin-top:6px">
+      <button type="submit" class="ax-btn">Salvar ${esc(p.name)}</button>
+    </div>
+  </form>
+
+  <h3 style="margin-top:24px;font-size:13px;color:var(--ax-text-mute);text-transform:uppercase;letter-spacing:0.05em">Margem estimada</h3>
+  <table class="ax-table" style="font-size:13px;margin-top:8px">
+    <tr><th style="width:60%">Item</th><th style="text-align:right">Valor</th></tr>
+    <tr><td>Whisper (${p.transcribe_hours_month ?? "∞"} h × ${fmtBrl(COST_WHISPER_BRL_PER_HOUR)})</td><td style="text-align:right">- ${fmtBrl(m.whisperCost)}</td></tr>
+    <tr><td>Storage Supabase (${((Number(p.kb_size_bytes ?? 0)) / 1024 / 1024).toFixed(0)} MB × ${fmtBrl(COST_STORAGE_BRL_PER_GB)}/GB)</td><td style="text-align:right">- ${fmtBrl(m.storageCost)}</td></tr>
+    <tr><td>NF Simples Nacional (${(NF_PERCENT * 100).toFixed(0)}% × preço)</td><td style="text-align:right">- ${fmtBrl(m.nfCost)}</td></tr>
+    <tr><td>VPS rateado (${fmtBrl(VPS_FIXED_BRL_PER_MONTH)} ÷ ${args.activeTenantCount} tenants ativos)</td><td style="text-align:right">- ${fmtBrl(m.vpsCost)}</td></tr>
+    <tr style="background:var(--ax-surface-2)"><td><strong>Custo total</strong></td><td style="text-align:right"><strong>- ${fmtBrl(m.totalCost)}</strong></td></tr>
+    <tr><td><strong>Preço</strong></td><td style="text-align:right"><strong>+ ${fmtBrl(Number(p.monthly_price_brl ?? 0))}</strong></td></tr>
+    <tr style="background:var(--ax-surface-2)"><td><strong>Margem líquida</strong></td><td style="text-align:right;color:${marginColor}"><strong>${fmtBrl(m.margin)} (${m.marginPct.toFixed(1)}%)</strong></td></tr>
+  </table>
+
+  <form method="POST" action="/super-admin/plans/${esc(p.id)}/sync-validapay" style="margin-top:14px;text-align:right">
+    <button type="submit" class="ax-btn ghost" ${p.monthly_price_brl == null ? "disabled" : ""}>
+      ${p.validapay_price_id ? "Re-sync" : "Sync"} ValidaPay
+    </button>
+  </form>
+</div>`;
+}
+
+function plansHtml(args: { plans: PlanRowFull[]; message?: string; activeTenantCount: number; activeTabId: string }): string {
   const msgs: Record<string, [string, "success" | "error"]> = {
     plan_saved:     ["Plano atualizado.", "success"],
     sync_ok:        ["Plano sincronizado com ValidaPay.", "success"],
@@ -468,38 +569,30 @@ function plansHtml(args: { plans: PlanRowFull[]; message?: string }): string {
     plan_not_found: ["Plano não encontrado.", "error"],
   };
   const [msgText, msgKind] = args.message ? msgs[args.message] ?? [args.message, "error"] : ["", ""];
-  return `
-<h1>Plans</h1>
-${msgText ? `<div class="msg ${msgKind}">${esc(msgText)}</div>` : ""}
-<p style="color:#94a3b8;font-size:13px">Edite preços e limites. Mudança fica ativa imediatamente. <strong>"Sync ValidaPay"</strong> cria o product+price no ValidaPay (sandbox/prod conforme env) e salva os IDs.</p>
+  const activeId = args.plans.find((p) => p.id === args.activeTabId) ? args.activeTabId : args.plans[0]?.id ?? "";
 
-${args.plans.map((p) => `
-<div class="card">
-  <h2>${esc(p.name)} <code>${esc(p.id)}</code>
-    ${p.validapay_price_id
-      ? `<span style="font-size:11px;color:#34d399">● ValidaPay synced (price ${esc(p.validapay_price_id)})</span>`
-      : `<span style="font-size:11px;color:#fbbf24">○ não sincronizado</span>`}
-  </h2>
-  <form method="POST" action="/super-admin/plans/${esc(p.id)}" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
-    <div><label>Nome</label><input name="name" value="${esc(p.name)}"></div>
-    <div><label>Preço BRL/mês</label><input name="monthly_price_brl" type="number" step="0.01" value="${p.monthly_price_brl ?? ""}"></div>
-    <div><label>Max cursos</label><input name="max_courses" type="number" value="${p.max_courses ?? ""}" placeholder="∞ se vazio"></div>
-    <div><label>Transcrição h/mês</label><input name="transcribe_hours_month" type="number" step="0.1" value="${p.transcribe_hours_month ?? ""}" placeholder="∞"></div>
-    <div><label>Alunos ativos/mês</label><input name="active_students_month" type="number" value="${p.active_students_month ?? ""}" placeholder="∞"></div>
-    <div><label>KB bytes</label><input name="kb_size_bytes" type="number" value="${p.kb_size_bytes ?? ""}" placeholder="∞"></div>
-    <div><label>Ordem display</label><input name="display_order" type="number" value="${p.display_order}"></div>
-    <div><label>Público?</label><select name="is_public"><option value="true"${p.is_public ? " selected" : ""}>Sim</option><option value="false"${!p.is_public ? " selected" : ""}>Não</option></select></div>
-    <div style="grid-column:1/-1;display:flex;gap:8px;justify-content:flex-end">
-      <button type="submit">Salvar ${esc(p.name)}</button>
-    </div>
-  </form>
-  <form method="POST" action="/super-admin/plans/${esc(p.id)}/sync-validapay" style="margin-top:8px;text-align:right">
-    <button type="submit" class="secondary" ${p.monthly_price_brl == null ? "disabled" : ""}>
-      ${p.validapay_price_id ? "Re-sync" : "Sync"} ValidaPay
-    </button>
-  </form>
-</div>
-`).join("")}`;
+  const tabs = args.plans.map((p) => `
+    <a href="?tab=${esc(p.id)}" class="plan-tab${p.id === activeId ? " active" : ""}">
+      ${esc(p.name)}
+      ${p.validapay_price_id ? `<span class="tab-dot" style="background:var(--ax-success)"></span>` : `<span class="tab-dot" style="background:var(--ax-warn)"></span>`}
+    </a>`).join("");
+
+  return `
+<style>
+  .plan-tabs { display:flex; gap:4px; border-bottom:1px solid var(--ax-border); margin-bottom:20px; padding:0 2px }
+  .plan-tab { display:inline-flex; align-items:center; gap:8px; padding:10px 16px; border-radius:8px 8px 0 0; font-size:13.5px; color:var(--ax-text-soft); border-bottom:2px solid transparent; margin-bottom:-1px; transition: color 0.1s ease, border 0.1s ease }
+  .plan-tab:hover { color:var(--ax-text); background:var(--ax-surface-2) }
+  .plan-tab.active { color:var(--ax-text); font-weight:500; border-bottom-color:var(--ax-text); background:var(--ax-surface-2) }
+  .tab-dot { width:6px; height:6px; border-radius:50%; display:inline-block }
+</style>
+
+<h1>Plans</h1>
+${msgText ? `<div class="ax-msg ${msgKind}">${esc(msgText)}</div>` : ""}
+<p class="help" style="margin-bottom:18px">Edite preços e limites. Mudança fica ativa imediatamente. <strong>"Sync ValidaPay"</strong> cria product+price no ValidaPay e salva os IDs. Cálculo de margem embaixo de cada plano.</p>
+
+<div class="plan-tabs">${tabs}</div>
+
+${args.plans.map((p) => planTabHtml(p, { activeTenantCount: args.activeTenantCount, isActive: p.id === activeId })).join("")}`;
 }
 
 // ----- Router --------------------------------------------------------------

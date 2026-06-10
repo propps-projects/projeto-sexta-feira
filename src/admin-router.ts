@@ -775,7 +775,7 @@ async function planPage(tenant: Tenant, req: IncomingMessage, res: ServerRespons
       body: `<h1>Plano "${esc(tenant.planId)}" não encontrado</h1>`,
     }));
   }
-  const usage = await getUsage(tenant.id, current);
+  const usage = await getUsage(tenant.id, current, tenant.status);
 
   html(res, 200, layoutHtml({
     title: "Plano e Uso",
@@ -978,7 +978,7 @@ function layoutHtml(args: {
     banner = `<div class="ax-banner danger">⚠ Conta <strong>suspensa</strong> por pagamento em atraso. Alunos não acessam o tutor MCP. <a href="${adminBaseUrl}/plan">Ver plano</a></div>`;
     badge = { label: "Suspenso", tone: "danger" };
   } else if (args.tenantStatus === "canceled") {
-    banner = `<div class="ax-banner muted">Conta <strong>cancelada</strong>. Pra reativar, mande email pra <a href="mailto:rafael@infosaas.co">rafael@infosaas.co</a>.</div>`;
+    banner = `<div class="ax-banner muted">Conta <strong>cancelada</strong>. Pra reativar, mande email pra <a href="mailto:support@askine.cc">support@askine.cc</a>.</div>`;
     badge = { label: "Cancelada", tone: "neutral" };
   } else if (args.tenantStatus === "trial") {
     banner = `<div class="ax-banner warn">Você está em <strong>trial</strong>. Finalize o pagamento pra continuar após o período.</div>`;
@@ -1471,7 +1471,7 @@ function planPageHtml(args: {
 <div class="card" style="margin-top:24px">
   <h3>Mudar de plano</h3>
   <p class="help">Por enquanto, mudança de plano é via operador. Em breve: upgrade automático com cobrança ValidaPay.</p>
-  <p class="help">Manda email pra <a href="mailto:rafael@infosaas.co">rafael@infosaas.co</a> com o plano desejado.</p>
+  <p class="help">Manda email pra <a href="mailto:support@askine.cc">support@askine.cc</a> com o plano desejado.</p>
 </div>`;
 }
 
