@@ -69,7 +69,7 @@ Format: MP4 H.264, 30fps, ≤ 100 MB. Subtitle/transcription is required by Open
 - [ ] **DPA template** (Enterprise-tier) — not yet written; needed before first Enterprise customer signs
 
 ### OpenAI-specific
-- [ ] **Iframe risk review** — OpenAI flags MCP apps that use iframes for "extra manual review". We DO use an iframe for `/mcp-gpt` (Apps SDK appsSdk adapter shipping to a Panda Video URL). The `GPT_USE_VIDEO=true` flag flips it to `<video>` + hls.js but is experimental. Decide BEFORE submitting: try `GPT_USE_VIDEO=true` and validate that the video plays correctly in ChatGPT, OR submit with the iframe and accept the slower review
+- [ ] **Iframe risk review** — OpenAI flags MCP apps that use iframes for "extra manual review". We DO use an iframe for `/mcp-gpt` (Apps SDK appsSdk adapter shipping to a Panda Video URL). This is now hardcoded: ChatGPT always gets the iframe (the `GPT_USE_VIDEO` flag was removed because `<video>`+hls.js can never play in ChatGPT — its widget CSP blocks `blob:`). Submit with the iframe and accept the slower review
 
 ### Anthropic-specific
 - [ ] **Confirm Claude.ai mounts the widget correctly** in production (not just dev) — there's a known gotcha where Claude collapses MCP-UI widgets to a thin strip without `preferred-frame-size`. We set it but reverify against the current Claude.ai version

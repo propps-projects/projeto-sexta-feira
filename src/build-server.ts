@@ -19,7 +19,11 @@ import type { McpUser, AccessibleCourse } from "./lib/mcp-users.ts";
 
 // ChatGPT Apps SDK widget URI for the lesson player. Registered as an MCP
 // resource on /mcp-gpt; referenced from play_lesson's `openai/outputTemplate`.
-const PLAYER_WIDGET_URI = "ui://widget/lesson-player.html";
+// NOTE: bump the version suffix (vN) whenever the widget HTML changes in a way
+// ChatGPT must re-fetch — the Apps SDK caches widget templates by URI, so the
+// same URI keeps serving a stale cached widget. v2: dropped the GPT_USE_VIDEO
+// <video> path; ChatGPT is now always the iframe→Panda widget.
+const PLAYER_WIDGET_URI = "ui://widget/lesson-player-v2.html";
 
 /**
  * Builds an McpServer with all tools registered. Used by both the stdio entry
@@ -136,15 +140,14 @@ export function buildServer(
   // <video> + hls.js (MediaSource Extensions) works because Claude's
   // media-src allows blob: and our connect_domains whitelists Panda.
   //
-  // GPT_USE_VIDEO=true experimental flag: try the <video> path on the
-  // ChatGPT endpoint too. Used to validate whether ChatGPT's media-src
-  // CSP — which is NOT configurable via _meta.ui.csp — has become more
-  // permissive since the last test. If it works, we eliminate the iframe
-  // path entirely and remove the OpenAI submission risk (iframes get
-  // "extra manual review and are often not approved").
-  const gptUseVideo = process.env.GPT_USE_VIDEO === "true";
+  // GPT_USE_VIDEO flag REMOVED (was a production footgun): ChatGPT's widget CSP
+  // hardcodes `media-src 'self'`, which blocks the blob: URLs hls.js/MSE feed a
+  // native <video> — so the <video> path NEVER plays in ChatGPT (confirmed; see
+  // PLAN.md "manter iframe no ChatGPT"). The choice is now hardcoded per host:
+  //   ChatGPT (appsSdk) → iframe→Panda   (its CSP allows frame-src to Panda)
+  //   Claude  (mcpApps) → <video>+hls.js (its CSP allows blob: in media-src)
   const widgetHtml = adapterMode === "appsSdk"
-    ? (gptUseVideo ? buildPlayerWidgetHtmlVideo() : buildPlayerWidgetHtml())
+    ? buildPlayerWidgetHtml()
     : buildPlayerWidgetHtmlVideo();
   const widgetWrapped = createUIResource({
     uri: PLAYER_WIDGET_URI,
