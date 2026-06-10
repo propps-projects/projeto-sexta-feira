@@ -45,15 +45,43 @@ const ENDPOINT_SUFFIXES = {
   "/mcp-gpt": "appsSdk" as AdapterMode,
 };
 
-// Legacy MCP_AUTH_TOKEN — kept for the legacy /mcp + /mcp-gpt routes so
-// the current production MVP deploy on EasyPanel keeps working without an
-// OAuth dance. Tenant routes (/t/:slug/) require real OAuth instead.
-const LEGACY_AUTH_TOKEN = process.env.MCP_AUTH_TOKEN || "";
-
 const transports = new Map<string, StreamableHTTPServerTransport>();
 
-function setCORS(res: ServerResponse) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+// CORS strategy (Phase 9.1 hardening):
+//   - /mcp + /mcp-gpt + /.well-known/* + /oauth/* + /auth/verify: open to
+//     known MCP clients (Claude.ai, ChatGPT). These endpoints don't use
+//     cookies — they auth via Authorization: Bearer, so opening Origin
+//     doesn't expose anything that wasn't already public via the token.
+//   - everything else (admin, super-admin, webhooks, public site): no
+//     CORS headers. Browser cross-origin reads blocked by SOP; form
+//     POSTs still go through but CSRF is mitigated by HttpOnly cookies
+//     + SameSite=Lax and require valid sessions.
+const MCP_CLIENT_ORIGINS = new Set<string>([
+  "https://claude.ai", "https://www.claude.ai",
+  "https://chatgpt.com", "https://www.chatgpt.com",
+  "https://chat.openai.com",
+]);
+
+function isMcpClientPath(path: string): boolean {
+  return path === "/mcp" || path === "/mcp-gpt"
+    || path.startsWith("/.well-known/")
+    || path.startsWith("/oauth/")
+    || path === "/auth/verify";
+}
+
+function setCORS(req: IncomingMessage, res: ServerResponse) {
+  const path = (req.url ?? "").split("?")[0];
+  if (!isMcpClientPath(path)) return; // no CORS for admin/site/webhooks
+  const origin = req.headers.origin;
+  if (origin && MCP_CLIENT_ORIGINS.has(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+  } else {
+    // For requests without an Origin (server-to-server, curl) we don't
+    // need to set CORS headers at all — they're not subject to SOP.
+    res.setHeader("Access-Control-Allow-Origin", "https://claude.ai");
+    res.setHeader("Vary", "Origin");
+  }
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, Mcp-Session-Id, mcp-session-id, MCP-Protocol-Version, Last-Event-ID");
   res.setHeader("Access-Control-Expose-Headers", "Mcp-Session-Id");
@@ -207,7 +235,7 @@ async function handleMcpRequest(args: {
 
 const httpServer = http.createServer(async (req, res) => {
   try {
-    setCORS(res);
+    setCORS(req, res);
     if (req.method === "OPTIONS") { res.writeHead(204).end(); return; }
 
     if (req.url === "/health") {
@@ -424,40 +452,26 @@ const httpServer = http.createServer(async (req, res) => {
       const publicUrl = (process.env.PUBLIC_URL || "http://localhost:3333").replace(/\/+$/, "");
       const prmUrl = `${publicUrl}/.well-known/oauth-protected-resource`;
 
-      // Priority 1: global OAuth Bearer (Phase 5+)
-      if (bearer && bearer !== LEGACY_AUTH_TOKEN) {
-        const claims = await validateAccessToken(bearer);
-        if (!claims || !claims.mcpUserId) {
-          return unauthorized(res, "Askine", prmUrl);
-        }
-        const mcpUser = await findMcpUserById(claims.mcpUserId);
-        if (!mcpUser) return unauthorized(res, "Askine", prmUrl);
-        const accessibleCourses = await listAccessibleCoursesGlobal(mcpUser.email);
-        await handleMcpRequest({
-          req, res,
-          adapterMode,
-          tenant: null,
-          studentId: null,
-          accessibleCourseIds: null,
-          mcpUser,
-          accessibleCourses,
-        });
-        return;
-      }
-
-      // Priority 2: legacy MCP_AUTH_TOKEN (deprecated single-tenant fallback)
-      if (LEGACY_AUTH_TOKEN) {
-        if (bearer !== LEGACY_AUTH_TOKEN) return unauthorized(res);
-      } else if (!bearer) {
-        // No legacy token configured AND no Bearer → require global auth
+      // Phase 9.1: only global OAuth Bearer is accepted. The legacy
+      // MCP_AUTH_TOKEN single-tenant fallback (which granted full read
+      // access with no tenant scoping, no studentId, and no rate
+      // limiting) has been removed entirely.
+      if (!bearer) return unauthorized(res, "Askine", prmUrl);
+      const claims = await validateAccessToken(bearer);
+      if (!claims || !claims.mcpUserId) {
         return unauthorized(res, "Askine", prmUrl);
       }
+      const mcpUser = await findMcpUserById(claims.mcpUserId);
+      if (!mcpUser) return unauthorized(res, "Askine", prmUrl);
+      const accessibleCourses = await listAccessibleCoursesGlobal(mcpUser.email);
       await handleMcpRequest({
         req, res,
         adapterMode,
         tenant: null,
         studentId: null,
         accessibleCourseIds: null,
+        mcpUser,
+        accessibleCourses,
       });
       return;
     }
@@ -472,10 +486,9 @@ const httpServer = http.createServer(async (req, res) => {
 });
 
 httpServer.listen(PORT, () => {
-  const legacy = LEGACY_AUTH_TOKEN ? "with MCP_AUTH_TOKEN" : "WITHOUT auth";
   const routes = Object.entries(ENDPOINT_SUFFIXES).map(([p, m]) => `${p} (${m})`).join(", ");
   console.error(`askine MCP HTTP server listening on :${PORT}`);
-  console.error(`  Legacy single-tenant: ${routes} — ${legacy}`);
+  console.error(`  Global MCP: ${routes} — OAuth Bearer required (no legacy fallback)`);
   console.error(`  Multi-tenant:         /t/:slug/{mcp,mcp-gpt} — OAuth Bearer required`);
   console.error(`  AS discovery (RFC 8414): /.well-known/oauth-authorization-server/t/:slug`);
   console.error(`  PRM discovery (RFC 9728): /.well-known/oauth-protected-resource/t/:slug/{mcp,mcp-gpt}`);
