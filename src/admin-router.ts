@@ -969,6 +969,172 @@ ${args.members.length === 0 ? `
 `}`;
 }
 
+// ----- Add-ons (tenant admin, Phase 8.3) ----------------------------------
+
+async function addonsListT(tenant: Tenant, req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const admin = await requireAdmin(tenant, req, res);
+  if (!admin) return;
+  const { listAddons, listTenantAddons } = await import("./lib/addons.ts");
+  const catalog = await listAddons({ publicOnly: true });
+  const mine = await listTenantAddons(tenant.id);
+  const url = new URL(req.url ?? "/", "http://x");
+  html(res, 200, await layoutHtml({
+    title: "Add-ons",
+    tenantId: tenant.id,
+    tenantName: tenant.name,
+    tenantSlug: tenant.slug,
+    tenantStatus: tenant.status,
+    tenantPlanId: tenant.planId,
+    activeNav: "addons",
+    admin,
+    body: addonsTHtml({ catalog, mine, isTrial: tenant.status === "trial", msg: url.searchParams.get("msg") ?? undefined }),
+  }));
+}
+
+async function addonBuyT(tenant: Tenant, addonId: string, req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const admin = await requireAdmin(tenant, req, res);
+  if (!admin) return;
+  if (tenant.status === "trial") {
+    return redirect(res, `${adminBase(tenant)}/addons?msg=trial_blocks_addons`);
+  }
+  const { getAddon, createTenantAddon } = await import("./lib/addons.ts");
+  const addon = await getAddon(addonId);
+  if (!addon) return redirect(res, `${adminBase(tenant)}/addons?msg=addon_not_found`);
+  if (!addon.validapayPriceId) {
+    return redirect(res, `${adminBase(tenant)}/addons?msg=addon_not_synced`);
+  }
+
+  // Need a contact document for the checkout
+  const tRow = await sb.selectOne<{ contact_email: string; contact_document: string | null }>(
+    "tenants", `id=eq.${tenant.id}&select=contact_email,contact_document`,
+  );
+  if (!tRow?.contact_document) {
+    return redirect(res, `${adminBase(tenant)}/addons?msg=missing_document`);
+  }
+
+  try {
+    const { createCheckoutSession } = await import("./lib/validapay.ts");
+    const session = await createCheckoutSession({
+      priceId: addon.validapayPriceId,
+      customer: { email: tRow.contact_email, documentNumber: tRow.contact_document },
+      allowedPaymentMethods: ["pix", "creditcard"],
+    });
+    await createTenantAddon({
+      tenantId: tenant.id,
+      addonId: addon.id,
+      checkoutId: session.id,
+    });
+    // Redirect the tenant straight to the ValidaPay checkout page
+    res.writeHead(302, { Location: session.url }).end();
+  } catch (err) {
+    console.error("Addon checkout creation failed:", err);
+    redirect(res, `${adminBase(tenant)}/addons?msg=checkout_failed`);
+  }
+}
+
+async function addonCancelT(tenant: Tenant, tenantAddonId: string, req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const admin = await requireAdmin(tenant, req, res);
+  if (!admin) return;
+  // Mark canceled locally; ValidaPay cancellation must currently be done
+  // from the ValidaPay dashboard until we have a programmatic cancel API.
+  // The webhook subscription.canceled will set canceled_at when it fires.
+  const row = await sb.selectOne<{ id: string; tenant_id: string }>(
+    "tenant_addons", `id=eq.${tenantAddonId}&tenant_id=eq.${tenant.id}&select=id,tenant_id`,
+  );
+  if (!row) return redirect(res, `${adminBase(tenant)}/addons?msg=not_found`);
+  await sb.update("tenant_addons", `id=eq.${tenantAddonId}`, {
+    status: "canceled",
+    canceled_at: new Date().toISOString(),
+  });
+  redirect(res, `${adminBase(tenant)}/addons?msg=canceled`);
+}
+
+function addonsTHtml(args: {
+  catalog: Array<import("./lib/addons.ts").Addon>;
+  mine: Array<import("./lib/addons.ts").TenantAddon>;
+  isTrial: boolean;
+  msg?: string;
+}): string {
+  const msgs: Record<string, [string, "success" | "error"]> = {
+    canceled:           ["Add-on cancelado.", "success"],
+    not_found:          ["Add-on não encontrado.", "error"],
+    addon_not_found:    ["Add-on inexistente.", "error"],
+    addon_not_synced:   ["Esse add-on ainda não está disponível pra checkout. Aguarde.", "error"],
+    missing_document:   ["Configure seu CPF/CNPJ no cadastro antes de comprar.", "error"],
+    checkout_failed:    ["Não foi possível abrir o checkout. Tenta de novo ou fale com o suporte.", "error"],
+    trial_blocks_addons: ["Add-ons disponíveis só pra contas pagas. Finalize seu plano primeiro.", "error"],
+  };
+  const [text, kind] = args.msg ? msgs[args.msg] ?? [args.msg, "error"] : ["", ""];
+
+  const addonById = new Map(args.catalog.map((a) => [a.id, a]));
+  const myActive = args.mine.filter((m) => m.status === "active");
+  const myPending = args.mine.filter((m) => m.status === "pending");
+  const fmtBrl = (n: number) => `R$ ${n.toFixed(0)}`;
+  const kindBadge = (k: string) => ({
+    more_courses: "+ Cursos", more_hours: "+ Horas", more_students: "+ Alunos", more_kb: "+ Storage",
+  } as Record<string, string>)[k] ?? k;
+
+  return `
+<h1>Add-ons</h1>
+${args.isTrial
+  ? `<div class="msg warn">Add-ons só estão disponíveis em contas pagas. Finalize o pagamento do seu plano pra liberar.</div>`
+  : ""}
+${text ? `<div class="msg ${kind}">${esc(text)}</div>` : ""}
+
+${myActive.length > 0 ? `
+  <h2 style="margin-top:24px">Seus add-ons ativos</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-bottom:24px">
+    ${myActive.map((m) => {
+      const a = addonById.get(m.addonId);
+      if (!a) return "";
+      return `<div class="card" style="background:#f5fbf6;border-color:#cfe9d6">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <strong>${esc(a.name)}</strong>
+          <span class="badge" style="background:#e8f5e9;color:#1e6f3e;padding:2px 8px;border-radius:99px;font-size:11px">Ativo</span>
+        </div>
+        <p class="help" style="margin:0 0 12px">${esc(a.description ?? "")}</p>
+        <div style="font-size:13px;color:#444">${esc(fmtBrl(a.monthlyPriceBrl))}/mês</div>
+        <form method="POST" action="addons/${esc(m.id)}/cancel" onsubmit="return confirm('Cancelar este add-on?')" style="margin-top:10px">
+          <button type="submit" class="danger" style="padding:5px 12px;font-size:12px">Cancelar</button>
+        </form>
+      </div>`;
+    }).join("")}
+  </div>
+` : ""}
+
+${myPending.length > 0 ? `
+  <h2 style="margin-top:24px">Aguardando pagamento</h2>
+  <div class="card">
+    ${myPending.map((m) => {
+      const a = addonById.get(m.addonId);
+      return `<p>• ${esc(a?.name ?? m.addonId)} — pagamento iniciado em ${new Date(m.createdAt).toLocaleString("pt-BR")}</p>`;
+    }).join("")}
+  </div>
+` : ""}
+
+<h2 style="margin-top:24px">Catálogo</h2>
+${args.catalog.length === 0 ? `
+  <div class="card">Nenhum add-on disponível por enquanto.</div>
+` : `
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px">
+  ${args.catalog.map((a) => `
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <strong>${esc(a.name)}</strong>
+        <span class="badge" style="background:#f4f4f5;color:#555;padding:2px 8px;border-radius:99px;font-size:11px">${esc(kindBadge(a.kind))}</span>
+      </div>
+      <p class="help" style="margin:0 0 14px">${esc(a.description ?? "")}</p>
+      <div style="font-size:24px;font-weight:600;letter-spacing:-0.02em">${esc(fmtBrl(a.monthlyPriceBrl))}<span style="font-size:13px;color:#999;font-weight:400"> /mês</span></div>
+      <form method="POST" action="addons/${esc(a.id)}/buy" style="margin-top:14px">
+        <button type="submit" ${args.isTrial ? "disabled" : ""} ${!a.validapayPriceId ? "disabled" : ""} style="width:100%">
+          ${!a.validapayPriceId ? "Em breve" : args.isTrial ? "Bloqueado em trial" : "Escolher esse"}
+        </button>
+      </form>
+    </div>`).join("")}
+</div>
+`}`;
+}
+
 // ----- Course detail + content ingest -------------------------------------
 
 interface ResolvedCourse {
@@ -1463,6 +1629,7 @@ ${banner}
         { id: "classes",      label: "Turmas",       href: `${adminBaseUrl}/classes`,               icon: icons.tenants },
         { id: "integrations", label: "Integrações",  href: `${adminBaseUrl}/integrations`,          icon: icons.plug },
         { id: "plan",         label: "Plano e uso",  href: `${adminBaseUrl}/plan`,                  icon: icons.plan },
+        { id: "addons",       label: "Add-ons",      href: `${adminBaseUrl}/addons`,                icon: icons.plug },
       ],
     }],
     activeId: args.activeNav,
@@ -1516,7 +1683,7 @@ function sidebarUsageBoxHtml(args: {
       fmtMb(args.usage.kbBytes.used),
       args.usage.kbBytes.limit == null ? "∞" : fmtMb(args.usage.kbBytes.limit),
       safePct(args.usage.kbBytes.used, args.usage.kbBytes.limit))}
-    <a class="ax-usage-cta" href="${esc(args.adminBaseUrl)}/plan">Ver plano</a>
+    <a class="ax-usage-cta" href="${esc(args.adminBaseUrl)}/addons">Comprar add-ons</a>
   </div>`;
 }
 
@@ -2165,6 +2332,9 @@ export type AdminRouteMatch =
   | { type: "class-remove-member"; classId: string }
   | { type: "class-grant-course"; classId: string }
   | { type: "class-delete"; classId: string }
+  | { type: "addons-list" }
+  | { type: "addon-buy"; addonId: string }
+  | { type: "addon-cancel"; tenantAddonId: string }
   | { type: "logout" };
 
 export function matchAdminRoute(suffix: string, method: string): AdminRouteMatch | null {
@@ -2195,6 +2365,11 @@ export function matchAdminRoute(suffix: string, method: string): AdminRouteMatch
     if (method === "POST" && tail === "/grant-course")   return { type: "class-grant-course", classId };
     if (method === "POST" && tail === "/delete")         return { type: "class-delete", classId };
   }
+  if (method === "GET"  && path === "/addons") return { type: "addons-list" };
+  const addonBuy = path.match(/^\/addons\/([a-z0-9_-]+)\/buy$/i);
+  if (method === "POST" && addonBuy) return { type: "addon-buy", addonId: addonBuy[1] };
+  const addonCancel = path.match(/^\/addons\/([0-9a-f-]{36})\/cancel$/i);
+  if (method === "POST" && addonCancel) return { type: "addon-cancel", tenantAddonId: addonCancel[1] };
   if (method === "GET"  && path === "/logout")  return { type: "logout" };
 
   // Course-scoped routes: /courses/:slug/...
@@ -2249,6 +2424,9 @@ export async function handleAdminRoute(
     case "class-remove-member":  return classRemoveMember(tenant, match.classId, req, res);
     case "class-grant-course":   return classGrantCourse(tenant, match.classId, req, res);
     case "class-delete":         return classDeleteHandler(tenant, match.classId, req, res);
+    case "addons-list":          return addonsListT(tenant, req, res);
+    case "addon-buy":            return addonBuyT(tenant, match.addonId, req, res);
+    case "addon-cancel":         return addonCancelT(tenant, match.tenantAddonId, req, res);
     case "logout":              return logout(tenant, req, res);
   }
 }

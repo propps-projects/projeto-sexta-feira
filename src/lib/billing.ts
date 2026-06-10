@@ -57,7 +57,7 @@ export interface WebhookEvent {
 
 export interface ProcessResult {
   ok: true;
-  action: "activated" | "extended" | "canceled" | "trial" | "payment_recorded" | "ignored";
+  action: "activated" | "extended" | "canceled" | "trial" | "payment_recorded" | "ignored" | "addon_activated" | "addon_canceled";
   tenantId?: string;
   reason?: string;
 }
@@ -102,8 +102,48 @@ function extendActiveUntil(current: string | null): string {
 }
 
 export async function processValidapayEvent(ev: WebhookEvent): Promise<ProcessResult> {
-  const tenant = await findTenantForEvent(ev);
   const evType = ev.event ?? "unknown";
+  const subId = ev.subscriptionId ?? ev.subscription?.id ?? null;
+
+  // Phase 8.3: if this event's subscriptionId matches one of our
+  // tenant_addons rows, route it to addon processing (separate from
+  // tenant.plan subscription handling).
+  if (subId) {
+    const { findTenantAddonBySubscription, activateTenantAddon, cancelTenantAddon } = await import("./addons.ts");
+    const tenantAddon = await findTenantAddonBySubscription(subId);
+    if (tenantAddon) {
+      await sb.insert("payments", {
+        tenant_id: tenantAddon.tenantId,
+        validapay_charge_id: ev.chargeId ?? null,
+        validapay_payment_id: ev.paymentId ?? null,
+        validapay_subscription_id: subId,
+        event: evType,
+        amount_brl: ev.amount != null ? Number(ev.amount) : null,
+        payment_method: ev.paymentMethod ?? null,
+        status: evType.endsWith(".failed") ? "failed" : evType.endsWith(".success") ? "success" : "pending",
+        raw_payload: ev as unknown as string,
+        processed_at: new Date().toISOString(),
+      }, { returning: "minimal" });
+      switch (evType) {
+        case "subscription.activated":
+        case "payment.success":
+        case "subscription.renewed":
+          await activateTenantAddon({
+            tenantAddonId: tenantAddon.id,
+            subscriptionId: subId,
+            activeUntil: extendActiveUntil(tenantAddon.activeUntil),
+          });
+          return { ok: true, action: "addon_activated", tenantId: tenantAddon.tenantId };
+        case "subscription.canceled":
+          await cancelTenantAddon(tenantAddon.id);
+          return { ok: true, action: "addon_canceled", tenantId: tenantAddon.tenantId };
+        default:
+          return { ok: true, action: "ignored", reason: `addon_unhandled:${evType}`, tenantId: tenantAddon.tenantId };
+      }
+    }
+  }
+
+  const tenant = await findTenantForEvent(ev);
 
   // Always record the payment in the audit table (with or without tenant)
   const amount = ev.amount != null ? Number(ev.amount) : null;
@@ -111,7 +151,7 @@ export async function processValidapayEvent(ev: WebhookEvent): Promise<ProcessRe
     tenant_id: tenant?.id ?? null,
     validapay_charge_id: ev.chargeId ?? null,
     validapay_payment_id: ev.paymentId ?? null,
-    validapay_subscription_id: ev.subscriptionId ?? ev.subscription?.id ?? null,
+    validapay_subscription_id: subId,
     event: evType,
     amount_brl: amount,
     payment_method: ev.paymentMethod ?? null,

@@ -289,6 +289,173 @@ async function planUpdate(id: string, req: IncomingMessage, res: ServerResponse)
   redirect(res, `${publicUrl()}/super-admin/plans?msg=plan_saved`);
 }
 
+// ----- Add-ons (Phase 8.3) -------------------------------------------------
+
+async function addonsList(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const sess = await requireSuperAdmin(req, res);
+  if (!sess) return;
+  const { listAddons } = await import("./lib/addons.ts");
+  const addons = await listAddons();
+  const q = getQuery(req);
+  html(res, 200, layout({
+    title: "Add-ons",
+    activeNav: "addons",
+    session: sess,
+    body: addonsHtml({ addons, message: q.get("msg") ?? undefined }),
+  }));
+}
+
+async function addonCreate(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const sess = await requireSuperAdmin(req, res);
+  if (!sess) return;
+  const form = await readForm(req);
+  const id = (form.get("id") ?? "").trim().toLowerCase().replace(/[^a-z0-9_]/g, "_");
+  const name = (form.get("name") ?? "").trim();
+  const description = (form.get("description") ?? "").trim() || null;
+  const kind = (form.get("kind") ?? "").trim() as "more_courses" | "more_hours" | "more_students" | "more_kb";
+  const increment_value = Number(form.get("increment_value") ?? "0");
+  const monthly_price_brl = Number(form.get("monthly_price_brl") ?? "0");
+  const display_order = Number(form.get("display_order") ?? "99");
+  const is_public = (form.get("is_public") ?? "true") === "true";
+
+  if (!id || !name || !kind || !increment_value || !monthly_price_brl) {
+    return redirect(res, `${publicUrl()}/super-admin/addons?msg=missing_fields`);
+  }
+  try {
+    await sb.insert("addons", {
+      id, name, description, kind, increment_value, monthly_price_brl, display_order, is_public,
+    }, { returning: "minimal" });
+    redirect(res, `${publicUrl()}/super-admin/addons?msg=addon_created`);
+  } catch (err) {
+    console.error("Addon create failed:", err);
+    redirect(res, `${publicUrl()}/super-admin/addons?msg=create_failed`);
+  }
+}
+
+async function addonUpdate(id: string, req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const sess = await requireSuperAdmin(req, res);
+  if (!sess) return;
+  const form = await readForm(req);
+  const patch: Record<string, unknown> = {
+    name: form.get("name") ?? undefined,
+    description: form.get("description") ?? null,
+    increment_value: form.get("increment_value") ? Number(form.get("increment_value")) : undefined,
+    monthly_price_brl: form.get("monthly_price_brl") ? Number(form.get("monthly_price_brl")) : undefined,
+    display_order: form.get("display_order") ? Number(form.get("display_order")) : undefined,
+    is_public: form.get("is_public") != null ? (form.get("is_public") === "true") : undefined,
+    updated_at: new Date().toISOString(),
+  };
+  for (const k of Object.keys(patch)) if (patch[k] === undefined) delete patch[k];
+  await sb.update("addons", `id=eq.${encodeURIComponent(id)}`, patch);
+  redirect(res, `${publicUrl()}/super-admin/addons?msg=addon_saved`);
+}
+
+async function addonSyncToValidapay(id: string, req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const sess = await requireSuperAdmin(req, res);
+  if (!sess) return;
+  const { getAddon, updateAddon } = await import("./lib/addons.ts");
+  const addon = await getAddon(id);
+  if (!addon) return redirect(res, `${publicUrl()}/super-admin/addons?msg=addon_not_found`);
+  try {
+    const { createProductWithMonthlyPrice } = await import("./lib/validapay.ts");
+    const product = await createProductWithMonthlyPrice({
+      name: `Askine — ${addon.name}`,
+      description: addon.description ?? addon.name,
+      statementDescriptor: `ASKINE+${addon.id.toUpperCase()}`.slice(0, 22),
+      amountBrl: addon.monthlyPriceBrl,
+      externalId: `addon_${addon.id}`,
+    });
+    const priceId = product.prices[0]?.priceId ?? null;
+    await updateAddon(addon.id, {
+      validapay_product_id: product.productId,
+      validapay_price_id: priceId,
+    });
+    redirect(res, `${publicUrl()}/super-admin/addons?msg=sync_ok`);
+  } catch (err) {
+    console.error("Addon ValidaPay sync failed:", err);
+    redirect(res, `${publicUrl()}/super-admin/addons?msg=sync_failed`);
+  }
+}
+
+function addonsHtml(args: {
+  addons: Array<import("./lib/addons.ts").Addon>;
+  message?: string;
+}): string {
+  const msgs: Record<string, [string, "success" | "error"]> = {
+    addon_created:   ["Add-on criado.", "success"],
+    addon_saved:     ["Add-on atualizado.", "success"],
+    sync_ok:         ["Add-on sincronizado com ValidaPay.", "success"],
+    sync_failed:     ["Falha ao sincronizar. Veja logs.", "error"],
+    addon_not_found: ["Add-on não encontrado.", "error"],
+    missing_fields:  ["Preencha id, nome, kind, valor e preço.", "error"],
+    create_failed:   ["Erro ao criar (talvez id duplicado).", "error"],
+  };
+  const [text, kind] = args.message ? msgs[args.message] ?? [args.message, "error"] : ["", ""];
+  const kindLabel: Record<string, string> = {
+    more_courses: "+N cursos", more_hours: "+N horas Whisper",
+    more_students: "+N alunos", more_kb: "+N bytes KB",
+  };
+  return `
+<h1>Add-ons</h1>
+${text ? `<div class="ax-msg ${kind}">${esc(text)}</div>` : ""}
+<p class="help" style="margin-bottom:18px">Catálogo de add-ons que os infoprodutores podem comprar como upgrade. Cada add-on vira um produto/price separado no ValidaPay — quando o tenant compra, criamos uma subscription dedicada.</p>
+
+<h2 style="font-size:16px;margin:24px 0 12px">Novo add-on</h2>
+<div class="ax-card compact">
+  <form method="POST" action="/super-admin/addons" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">
+    <div><label>ID (slug)</label><input name="id" required placeholder="extra_course_5" pattern="[a-z0-9_]+"></div>
+    <div><label>Nome</label><input name="name" required placeholder="+5 cursos"></div>
+    <div><label>Kind</label>
+      <select name="kind" required>
+        <option value="more_courses">more_courses</option>
+        <option value="more_hours">more_hours</option>
+        <option value="more_students">more_students</option>
+        <option value="more_kb">more_kb</option>
+      </select>
+    </div>
+    <div><label>Increment</label><input name="increment_value" type="number" step="0.01" required></div>
+    <div><label>Preço BRL/mês</label><input name="monthly_price_brl" type="number" step="0.01" required></div>
+    <div><label>Ordem</label><input name="display_order" type="number" value="99"></div>
+    <div><label>Público?</label><select name="is_public"><option value="true">Sim</option><option value="false">Não</option></select></div>
+    <div style="grid-column:1/-1"><label>Descrição</label><input name="description" placeholder="Texto pro infoprodutor entender"></div>
+    <div style="grid-column:1/-1;display:flex;justify-content:flex-end">
+      <button type="submit" class="ax-btn">Criar add-on</button>
+    </div>
+  </form>
+</div>
+
+<h2 style="font-size:16px;margin:32px 0 12px">Catálogo (${args.addons.length})</h2>
+${args.addons.length === 0 ? `<div class="ax-card">Nenhum add-on cadastrado.</div>` : args.addons.map((a) => `
+<div class="ax-card">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+    <h3 style="margin:0;font-size:15px">${esc(a.name)}</h3>
+    <code style="font-size:12px;color:var(--ax-text-mute)">${esc(a.id)}</code>
+    <span class="ax-badge" style="background:var(--ax-surface-2);color:var(--ax-text-soft)">${esc(kindLabel[a.kind] ?? a.kind)}</span>
+    ${a.validapayPriceId
+      ? `<span class="ax-badge" style="background:#e8f5e9;color:#1e6f3e">● ValidaPay sync</span>`
+      : `<span class="ax-badge" style="background:#fff4d6;color:#8a5a00">○ não sincronizado</span>`}
+  </div>
+  ${a.description ? `<p class="help" style="margin:0 0 12px">${esc(a.description)}</p>` : ""}
+  <form method="POST" action="/super-admin/addons/${esc(a.id)}" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;font-size:13px">
+    <div><label>Nome</label><input name="name" value="${esc(a.name)}"></div>
+    <div><label>Increment</label><input name="increment_value" type="number" step="0.01" value="${a.incrementValue}"></div>
+    <div><label>Preço BRL/mês</label><input name="monthly_price_brl" type="number" step="0.01" value="${a.monthlyPriceBrl}"></div>
+    <div><label>Ordem</label><input name="display_order" type="number" value="${a.displayOrder}"></div>
+    <div><label>Público?</label><select name="is_public"><option value="true"${a.isPublic ? " selected" : ""}>Sim</option><option value="false"${!a.isPublic ? " selected" : ""}>Não</option></select></div>
+    <div style="grid-column:1/-1"><label>Descrição</label><input name="description" value="${esc(a.description ?? "")}"></div>
+    <div style="grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px">
+      <button type="submit" class="ax-btn">Salvar</button>
+    </div>
+  </form>
+  <form method="POST" action="/super-admin/addons/${esc(a.id)}/sync-validapay" style="margin-top:8px;text-align:right">
+    <button type="submit" class="ax-btn ghost">
+      ${a.validapayPriceId ? "Re-sync" : "Sync"} ValidaPay
+    </button>
+  </form>
+</div>
+`).join("")}`;
+}
+
 // ----- Templates -----------------------------------------------------------
 
 function esc(s: string): string {
@@ -352,6 +519,7 @@ function layout(args: {
         { id: "dashboard", label: "Dashboard", href: "/super-admin",          icon: icons.dashboard },
         { id: "tenants",   label: "Tenants",   href: "/super-admin/tenants",  icon: icons.tenants },
         { id: "plans",     label: "Plans",     href: "/super-admin/plans",    icon: icons.plan },
+        { id: "addons",    label: "Add-ons",   href: "/super-admin/addons",   icon: icons.plug },
       ],
     }],
     activeId: args.activeNav,
@@ -606,6 +774,10 @@ export type SuperAdminRouteMatch =
   | { type: "plans-list" }
   | { type: "plan-update"; id: string }
   | { type: "plan-sync"; id: string }
+  | { type: "addons-list" }
+  | { type: "addon-create" }
+  | { type: "addon-update"; id: string }
+  | { type: "addon-sync"; id: string }
   | { type: "logout" };
 
 export function matchSuperAdminRoute(suffix: string, method: string): SuperAdminRouteMatch | null {
@@ -616,6 +788,8 @@ export function matchSuperAdminRoute(suffix: string, method: string): SuperAdmin
   if (method === "GET"  && path === "/verify")   return { type: "verify" };
   if (method === "GET"  && path === "/tenants")  return { type: "tenants-list" };
   if (method === "GET"  && path === "/plans")    return { type: "plans-list" };
+  if (method === "GET"  && path === "/addons")   return { type: "addons-list" };
+  if (method === "POST" && path === "/addons")   return { type: "addon-create" };
   if (method === "GET"  && path === "/logout")   return { type: "logout" };
   const tenantPlan = path.match(/^\/tenants\/([a-z0-9][a-z0-9-]{0,62})\/plan$/i);
   if (method === "POST" && tenantPlan) return { type: "tenant-plan", slug: tenantPlan[1] };
@@ -625,6 +799,10 @@ export function matchSuperAdminRoute(suffix: string, method: string): SuperAdmin
   if (method === "POST" && planSync) return { type: "plan-sync", id: planSync[1] };
   const planUp = path.match(/^\/plans\/([a-z0-9_-]+)$/i);
   if (method === "POST" && planUp) return { type: "plan-update", id: planUp[1] };
+  const addonSync = path.match(/^\/addons\/([a-z0-9_-]+)\/sync-validapay$/i);
+  if (method === "POST" && addonSync) return { type: "addon-sync", id: addonSync[1] };
+  const addonUp = path.match(/^\/addons\/([a-z0-9_-]+)$/i);
+  if (method === "POST" && addonUp) return { type: "addon-update", id: addonUp[1] };
   return null;
 }
 
@@ -644,6 +822,10 @@ export async function handleSuperAdminRoute(
     case "plans-list":     return plansList(req, res);
     case "plan-update":    return planUpdate(match.id, req, res);
     case "plan-sync":      return planSyncToValidapay(match.id, req, res);
+    case "addons-list":    return addonsList(req, res);
+    case "addon-create":   return addonCreate(req, res);
+    case "addon-update":   return addonUpdate(match.id, req, res);
+    case "addon-sync":     return addonSyncToValidapay(match.id, req, res);
     case "logout":         return logout(req, res);
   }
 }

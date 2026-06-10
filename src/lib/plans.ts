@@ -84,7 +84,7 @@ function startOfMonthIso(): string {
 }
 
 export async function getUsage(tenantId: string, plan: Plan, tenantStatus: string = "active"): Promise<Usage> {
-  const limits = effectiveLimits(plan, tenantStatus);
+  const limits = await effectiveLimits(tenantId, plan, tenantStatus);
   // Course count
   const courseRows = await sb.select<{ id: string }>(
     "courses",
@@ -167,21 +167,27 @@ export const TRIAL_LIMITS = {
 export const TRIAL_DURATION_DAYS = 7;
 
 /** Returns the effective limits — trial caps when status='trial', otherwise
- *  the plan's own limits. Used by both getUsage(...) and enforceQuota(...). */
-function effectiveLimits(plan: Plan, tenantStatus: string): {
+ *  the plan's own limits PLUS active addon increments. Trial does NOT get
+ *  addon increments (addons only apply on paid accounts). Used by both
+ *  getUsage(...) and enforceQuota(...). */
+async function effectiveLimits(tenantId: string, plan: Plan, tenantStatus: string): Promise<{
   maxCourses: number | null;
   transcribeHoursMonth: number | null;
   activeStudentsMonth: number | null;
   kbSizeBytes: number | null;
-} {
+}> {
   if (tenantStatus === "trial") {
     return TRIAL_LIMITS;
   }
+  const { sumActiveAddons } = await import("./addons.ts");
+  const addons = await sumActiveAddons(tenantId);
+  const add = (base: number | null, extra: number): number | null =>
+    base == null ? null : base + extra;
   return {
-    maxCourses: plan.maxCourses,
-    transcribeHoursMonth: plan.transcribeHoursMonth,
-    activeStudentsMonth: plan.activeStudentsMonth,
-    kbSizeBytes: plan.kbSizeBytes,
+    maxCourses:           add(plan.maxCourses,           addons.extraCourses),
+    transcribeHoursMonth: add(plan.transcribeHoursMonth, addons.extraHours),
+    activeStudentsMonth:  add(plan.activeStudentsMonth,  addons.extraStudents),
+    kbSizeBytes:          add(plan.kbSizeBytes,          addons.extraKbBytes),
   };
 }
 
