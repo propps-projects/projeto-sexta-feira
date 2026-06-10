@@ -77,7 +77,7 @@ export async function sendMagicLinkEmail(args: {
   tenantName: string;
 }): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM ?? "Askine <login@askine.com.br>";
+  const from = process.env.RESEND_FROM ?? "Askine <login@askine.cc>";
   if (!apiKey) {
     console.warn(`[magic-link] No RESEND_API_KEY set — link for ${args.to}:`);
     console.warn(`  ${args.url}`);

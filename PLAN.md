@@ -8,8 +8,8 @@
 
 - **Marca:** Askine
 - **CNPJ:** 35.735.278/0001-91
-- **Domínio principal (a registrar):** `askine.com.br` + `askine.com`
-- **Emails institucionais sugeridos:** `contato@askine.com.br`, `suporte@askine.com.br`, `legal@askine.com.br`
+- **Domínio principal (registrado):** `askine.cc` — apontado para a VPS
+- **Emails institucionais sugeridos:** `contato@askine.cc`, `suporte@askine.cc`, `legal@askine.cc`
 - **Logo + identidade visual:** será criada (TODO — fora do escopo de engenharia)
 
 ---
@@ -366,7 +366,7 @@ Implementação: token bucket no Redis. Header `Retry-After` quando estoura.
 - [ ] `inputSchema` + `outputSchema` em todas as 5 tools (já temos)
 - [ ] Tool result separado: `content` (texto), `structuredContent` (dados), `_meta` (UI hints) — já temos
 - [ ] Widget MIME `text/html;profile=mcp-app` exato (já temos)
-- [ ] `_meta.ui.domain` definido na resource (TODO — apontar pra `askine.com.br` ou subdomain)
+- [ ] `_meta.ui.domain` definido na resource (TODO — apontar pra `askine.cc` ou subdomain)
 - [ ] `_meta.ui.csp` completo (já temos)
 - [ ] **Decisão de player no ChatGPT** (iframe vs `<video>` HTML5 — ver experimento abaixo)
 
@@ -399,7 +399,7 @@ Argumentação "iframe é core" — apoiada em:
 
 **Conta demo permanente (obrigatória pra reviewers):**
 
-- Tenant: **`demo.askine.com.br`** com o curso de teste do MVP (**VMA Produtificação** — 13 aulas, já transcritas, vetores indexados)
+- Tenant: **`demo.askine.cc`** com o curso de teste do MVP (**VMA Produtificação** — 13 aulas, já transcritas, vetores indexados)
 - Login: email/senha simples, **sem MFA, SMS, ou verificação por email**
 - Credenciais salvas no painel de submissão (rotacionar semestralmente)
 - Sample knowledge base: 1-2 PDFs de teste já carregados
@@ -409,9 +409,9 @@ Argumentação "iframe é core" — apoiada em:
 **Legal & Negócio (obrigatórios):**
 
 - [ ] CNPJ ativo (vou perguntar se já tem)
-- [ ] **Privacy Policy** em `askine.com.br/privacidade` cobrindo: categorias de dados, propósitos, recipients (Supabase, ValidaPay, OpenAI, Anthropic, Hotmart), retention, controles do usuário (LGPD-compliant)
-- [ ] **Terms of Service** em `askine.com.br/termos`
-- [ ] **Customer support contact** publicado (`suporte@askine.com.br` ou similar) com tempo de resposta declarado
+- [ ] **Privacy Policy** em `askine.cc/privacidade` cobrindo: categorias de dados, propósitos, recipients (Supabase, ValidaPay, OpenAI, Anthropic, Hotmart), retention, controles do usuário (LGPD-compliant)
+- [ ] **Terms of Service** em `askine.cc/termos`
+- [ ] **Customer support contact** publicado (`suporte@askine.cc` ou similar) com tempo de resposta declarado
 - [ ] Project OpenAI com **global data residency** (NÃO EU — projetos EU não podem submeter)
 - [ ] Brasil + PT-BR declarados no campo de localization
 - [ ] **CRÍTICO — sem monetização visível no widget:** removemos qualquer texto/CTA tipo "upgrade", "comprar curso", "vire premium". A política proíbe. Tutor é tutor, ponto.
@@ -428,8 +428,8 @@ Argumentação "iframe é core" — apoiada em:
 **Multi-tenant submission:**
 
 OpenAI suporta via **Template submission**:
-- 1 demo MCP URL completo (= `demo.askine.com.br`)
-- 1 Template URL pattern (= `{tenant}.askine.com.br/mcp-gpt` — segmento variável)
+- 1 demo MCP URL completo (= `demo.askine.cc`)
+- 1 Template URL pattern (= `{tenant}.askine.cc/mcp-gpt` — segmento variável)
 - **Submissão única cobre todos os infoprodutores futuros.** Cada novo tenant não precisa de re-review.
 
 **Roteiro de testes pra reviewers (entregar junto):**
@@ -479,9 +479,9 @@ interface VideoSourceAdapter {
 
 - [x] **Marca:** Askine
 - [x] **CNPJ:** 35.735.278/0001-91 (ativo)
-- [ ] **Domínio:** registrar `askine.com.br` + `askine.com` antes de publicar OAuth callbacks
+- [x] **Domínio:** `askine.cc` registrado e apontado para a VPS
 - [ ] **Logo + identidade visual:** em criação
-- [ ] **Termos de Uso + Política de Privacidade:** redigir + publicar em `askine.com.br/legal` (LGPD-compliant; obrigatório p/ submissão OpenAI + Anthropic)
+- [ ] **Termos de Uso + Política de Privacidade:** redigir + publicar em `askine.cc/legal` (LGPD-compliant; obrigatório p/ submissão OpenAI + Anthropic)
 - [ ] **Emissão de NF:** integrar com emissor (ex: NFE.io, eNotas) pra automatizar — antes do primeiro pagamento confirmado
 - [ ] **Conta bancária PJ + Pix CNPJ:** ValidaPay vai depositar lá
 - [ ] **Confirmar fee real do ValidaPay** (assumido ~1,5% PIX na análise de margem — validar antes de fechar pricing)

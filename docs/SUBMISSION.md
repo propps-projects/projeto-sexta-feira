@@ -56,10 +56,10 @@ Recommended dimensions per OpenAI: at least 1280×800. Capture in light AND dark
 Format: MP4 H.264, 30fps, ≤ 100 MB. Subtitle/transcription is required by OpenAI.
 
 ### Domain (you, DNS provider)
-- [ ] **Register `askine.com.br`** — Registro.br
-- [ ] Point an A record at the EasyPanel-served public IP
-- [ ] Verify SSL: EasyPanel auto-provisions Let's Encrypt; takes ≤ 5 min
-- [ ] Update `PUBLIC_URL` env var in EasyPanel to `https://askine.com.br`
+- [x] **Register `askine.cc`** — registered
+- [x] Point an A record at the VPS public IP
+- [ ] Verify SSL: `certbot --nginx -d askine.cc` provisions Let's Encrypt
+- [ ] Update `PUBLIC_URL` env var on the VPS to `https://askine.cc`
 - [ ] Re-encrypt nothing — the secret envelope uses `APP_ENCRYPTION_KEY` not the URL
 - [ ] Run a `/.well-known/oauth-authorization-server` check — the `issuer` field should change to the new URL
 

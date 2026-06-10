@@ -68,7 +68,7 @@ Estimated RTO: 30 min – 2h depending on database size + ops familiarity.
 
 1. Provision a fresh container anywhere (Fly.io, Render, even a $5 DigitalOcean droplet).
 2. Clone repo, install deps, set the same env vars.
-3. Update DNS for `askine.com.br` (once registered) to point at the new host.
+3. Update DNS for `askine.cc` to point at the new host.
 4. ValidaPay + Hotmart webhooks already point at our public URL — they keep working through DNS change.
 
 This is documented but never drilled. First drill scheduled before launching Pro tier publicly.

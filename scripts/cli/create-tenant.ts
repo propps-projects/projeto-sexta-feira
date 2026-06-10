@@ -5,7 +5,7 @@
  *   npx tsx scripts/cli/create-tenant.ts \
  *     --slug demo \
  *     --name "Demo Tenant" \
- *     --email demo@askine.com.br \
+ *     --email demo@askine.cc \
  *     [--plan starter|pro|scale|enterprise] \
  *     [--status trial|active] \
  *     [--panda-key panda-xxx]
