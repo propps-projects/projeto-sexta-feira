@@ -149,6 +149,28 @@ export async function processHotmartEvent(
     return { ok: false, status: 400, error: "Missing product id" };
   }
 
+  // Phase 9.2: idempotency. Hotmart can retry delivery on transient
+  // failures; processing the same event twice would double-grant or
+  // double-revoke. Pattern: attempt a plain INSERT keyed by event.id
+  // (PK). Success → we're first; 23505 unique violation → replay
+  // (return ignored). Other errors: log and proceed (better to risk
+  // a duplicate grant — which is idempotent via grantCourseAccess
+  // upsert — than to drop a real purchase).
+  if (event.id) {
+    try {
+      await sb.insert(
+        "hotmart_events_processed",
+        { event_id: event.id, tenant_id: tenant.id, event_type: eventType },
+        { returning: "minimal" },
+      );
+    } catch (err) {
+      if (err instanceof Error && /23505|duplicate|already exists/i.test(err.message)) {
+        return { ok: true, action: "ignored", reason: `Event ${event.id} already processed (replay)` };
+      }
+      console.error("[hotmart] dedup insert failed, proceeding without:", err);
+    }
+  }
+
   // Resolve which course this product unlocks for this tenant. If the
   // tenant hasn't mapped this product yet, log + 200 — we don't want
   // Hotmart to retry forever on a yet-to-be-configured product.

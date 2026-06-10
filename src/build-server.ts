@@ -322,12 +322,24 @@ export function buildServer(
   async function rateLimitOrError(toolName: string): Promise<
     { isError: true; content: Array<{ type: "text"; text: string }> } | null
   > {
-    if (!tenant || !auth.studentId) return null;
-    const r = await checkAndCount({
-      tenantId: tenant.id,
-      studentId: auth.studentId,
-      toolName,
-    });
+    // Identify the caller across both modes:
+    //   - tenant-scoped Bearer: (tenant, student) keys the bucket
+    //   - global Bearer (Phase 5+): mcpUser keys the bucket
+    //   - legacy / no-auth (impossible after Phase 9.1): skip
+    let tenantId: string;
+    let studentId: string;
+    if (tenant && auth.studentId) {
+      tenantId = tenant.id;
+      studentId = auth.studentId;
+    } else if (auth.mcpUser) {
+      // Global mode: synthetic tenant + use the global user id. Phase
+      // 9.2 closes the previously uncapped global path.
+      tenantId = "_global";
+      studentId = auth.mcpUser.id;
+    } else {
+      return null;
+    }
+    const r = await checkAndCount({ tenantId, studentId, toolName });
     if (r.ok) return null;
     const mins = Math.ceil(r.retryAfterSec / 60);
     return {

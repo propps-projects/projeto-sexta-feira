@@ -5,8 +5,14 @@
  * Failures are logged to stderr but never propagated. This is the right
  * trade-off because losing a single analytics row never breaks the user
  * experience, while blocking a tool call on PostgREST availability would.
+ *
+ * Phase 9.2 (PII redaction): raw user-typed text (search queries, free-form
+ * notes) is never persisted to analytics tables. The semantic embedding
+ * vector is kept because clustering on it powers "top topics" insights
+ * without exposing the verbatim query.
  */
 
+import { createHash } from "node:crypto";
 import { sb } from "./db-api.ts";
 
 export interface ToolCallRecord {
@@ -19,6 +25,29 @@ export interface ToolCallRecord {
   latencyMs?: number;
 }
 
+/**
+ * Redact PII fields from tool input before persisting. We keep stable
+ * IDs (courseId, lessonNumber, lessonId, startSec, endSec, limit) but
+ * drop free-form text the user typed (query, note, prompt). Free-form
+ * fields are replaced with a short SHA-256 hash so admins can group
+ * "this user repeats the same question" patterns without storing the
+ * content.
+ */
+function redactInput(input: Record<string, unknown>): Record<string, unknown> {
+  const PII_FIELDS = new Set(["query", "q", "prompt", "note", "message", "search", "text"]);
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(input)) {
+    if (PII_FIELDS.has(k) && typeof v === "string" && v.length > 0) {
+      // 8-char hex prefix: enough to dedupe identical queries from same
+      // student without leaking content
+      out[k] = `[redacted:${createHash("sha256").update(v).digest("hex").slice(0, 8)}]`;
+    } else {
+      out[k] = v;
+    }
+  }
+  return out;
+}
+
 export function recordToolCall(args: ToolCallRecord): void {
   setImmediate(async () => {
     try {
@@ -27,7 +56,7 @@ export function recordToolCall(args: ToolCallRecord): void {
         student_id: args.studentId ?? null,
         course_id: args.courseId ?? null,
         tool_name: args.toolName,
-        input: args.input,
+        input: redactInput(args.input),
         output_summary: args.outputSummary ?? null,
         latency_ms: args.latencyMs ?? null,
       }, { returning: "minimal" });
@@ -58,11 +87,15 @@ export function recordSearchQuery(args: SearchQueryRecord): void {
   setImmediate(async () => {
     try {
       const vec = `[${Array.from(args.queryEmbedding).join(",")}]`;
+      // Phase 9.2: the raw query text is replaced by an 8-char SHA-256
+      // prefix. The embedding stays — it's not reversibly mappable to
+      // the text but supports clustering by topic.
+      const queryHash = `sha256:${createHash("sha256").update(args.query).digest("hex").slice(0, 8)}`;
       await sb.insert("search_queries", {
         tenant_id: args.tenantId,
         course_id: args.courseId,
         student_id: args.studentId,
-        query: args.query,
+        query: queryHash,
         query_embedding: vec,
         result_lesson_ids: args.resultLessonIds,
       }, { returning: "minimal" });
