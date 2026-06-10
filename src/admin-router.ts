@@ -99,7 +99,7 @@ async function loginGet(tenant: Tenant, req: IncomingMessage, res: ServerRespons
     return redirect(res, adminBase(tenant));
   }
   const q = getQuery(req);
-  html(res, 200, adminLoginHtml({
+  html(res, 200, await adminLoginHtml({
     tenantName: tenant.name,
     tenantSlug: tenant.slug,
     tenantStatus: tenant.status,
@@ -141,7 +141,7 @@ async function verifyMagicLink(tenant: Tenant, req: IncomingMessage, res: Server
   const token = q.get("token") ?? "";
   const claims = await consumeMagicLink(token);
   if (!claims || claims.tenantId !== tenant.id || claims.intent !== "admin_login") {
-    return html(res, 400, layoutHtml({
+    return html(res, 400, await layoutHtml({
       title: "Link inválido",
       tenantName: tenant.name,
       body: `<h1>Link expirado ou inválido</h1><p><a href="${adminBase(tenant)}/login">Pedir um novo</a></p>`,
@@ -149,7 +149,7 @@ async function verifyMagicLink(tenant: Tenant, req: IncomingMessage, res: Server
   }
   const admin = await findAdmin(tenant.id, claims.email);
   if (!admin) {
-    return html(res, 403, layoutHtml({
+    return html(res, 403, await layoutHtml({
       title: "Sem permissão",
       tenantName: tenant.name,
       body: `<h1>Sem permissão</h1><p>Esse email não tem acesso admin a este tenant.</p>`,
@@ -176,10 +176,12 @@ async function dashboard(tenant: Tenant, req: IncomingMessage, res: ServerRespon
     `tenant_id=eq.${tenant.id}&select=id,slug,name,ingest_status&order=created_at.desc`,
   );
 
-  html(res, 200, layoutHtml({
+  html(res, 200, await layoutHtml({
     title: "Dashboard",
     tenantName: tenant.name,
     tenantSlug: tenant.slug,
+      tenantId: tenant.id,
+      tenantPlanId: tenant.planId,
     tenantStatus: tenant.status,
     activeNav: "dashboard",
     admin,
@@ -202,10 +204,12 @@ async function integrationsGet(tenant: Tenant, req: IncomingMessage, res: Server
   );
 
   const q = getQuery(req);
-  html(res, 200, layoutHtml({
+  html(res, 200, await layoutHtml({
     title: "Integrações",
     tenantName: tenant.name,
     tenantSlug: tenant.slug,
+      tenantId: tenant.id,
+      tenantPlanId: tenant.planId,
     tenantStatus: tenant.status,
     activeNav: "integrations",
     admin,
@@ -309,10 +313,12 @@ async function coursesGet(tenant: Tenant, req: IncomingMessage, res: ServerRespo
   );
 
   const q = getQuery(req);
-  html(res, 200, layoutHtml({
+  html(res, 200, await layoutHtml({
     title: "Cursos",
     tenantName: tenant.name,
     tenantSlug: tenant.slug,
+      tenantId: tenant.id,
+      tenantPlanId: tenant.planId,
     tenantStatus: tenant.status,
     activeNav: "courses",
     admin,
@@ -377,10 +383,12 @@ async function studentsImportGet(tenant: Tenant, req: IncomingMessage, res: Serv
   const courses = (await listCoursesForTenant(tenant.id)).filter((c) => c.ingestStatus === "ready");
   const url = new URL(req.url ?? "/", "http://x");
   const msg = url.searchParams.get("msg") ?? undefined;
-  html(res, 200, layoutHtml({
+  html(res, 200, await layoutHtml({
     title: "Importar alunos",
     tenantName: tenant.name,
     tenantSlug: tenant.slug,
+      tenantId: tenant.id,
+      tenantPlanId: tenant.planId,
     tenantStatus: tenant.status,
     activeNav: "students",
     admin,
@@ -414,10 +422,12 @@ async function studentsImportPost(tenant: Tenant, req: IncomingMessage, res: Ser
   const { listCoursesForTenant } = await import("./lib/courses.ts");
   const courses = (await listCoursesForTenant(tenant.id)).filter((c) => c.ingestStatus === "ready");
   const selectedCourseNames = courses.filter((c) => courseIds.includes(c.id)).map((c) => c.name);
-  html(res, 200, layoutHtml({
+  html(res, 200, await layoutHtml({
     title: "Importação concluída",
     tenantName: tenant.name,
     tenantSlug: tenant.slug,
+      tenantId: tenant.id,
+      tenantPlanId: tenant.planId,
     tenantStatus: tenant.status,
     activeNav: "students",
     admin,
@@ -566,6 +576,399 @@ ${importErrRows}
 </style>`;
 }
 
+// ----- Students list + Classes (Phase 8.2) --------------------------------
+
+async function studentsList(tenant: Tenant, req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const admin = await requireAdmin(tenant, req, res);
+  if (!admin) return;
+  const url = new URL(req.url ?? "/", "http://x");
+  const filterClass = url.searchParams.get("class") ?? "";
+  const filterCourse = url.searchParams.get("course") ?? "";
+  const onlyActive = url.searchParams.get("active") === "1";
+
+  // Pull students for tenant
+  const studentRows = await sb.select<{
+    id: string; email: string; display_name: string | null; last_active_at: string | null; created_at: string;
+  }>(
+    "students",
+    `tenant_id=eq.${tenant.id}&select=id,email,display_name,last_active_at,created_at&order=created_at.desc&limit=500`,
+  );
+
+  // Per-student: classes + course count
+  const studentIds = studentRows.map((s) => s.id);
+  const classMemberRows = studentIds.length ? await sb.select<{
+    student_id: string; class_id: string; classes: { name: string } | null;
+  }>(
+    "class_members",
+    `student_id=in.(${studentIds.join(",")})&select=student_id,class_id,classes(name)`,
+  ) : [];
+  const classesByStudent = new Map<string, Array<{ id: string; name: string }>>();
+  for (const r of classMemberRows) {
+    const list = classesByStudent.get(r.student_id) ?? [];
+    if (r.classes) list.push({ id: r.class_id, name: r.classes.name });
+    classesByStudent.set(r.student_id, list);
+  }
+
+  const accessRows = studentIds.length ? await sb.select<{
+    student_id: string; course_id: string; courses: { name: string; tenant_id: string } | null;
+  }>(
+    "course_access",
+    `student_id=in.(${studentIds.join(",")})&revoked_at=is.null&select=student_id,course_id,courses!inner(name,tenant_id)&courses.tenant_id=eq.${tenant.id}`,
+  ) : [];
+  const coursesByStudent = new Map<string, Array<{ id: string; name: string }>>();
+  for (const r of accessRows) {
+    const list = coursesByStudent.get(r.student_id) ?? [];
+    if (r.courses) list.push({ id: r.course_id, name: r.courses.name });
+    coursesByStudent.set(r.student_id, list);
+  }
+
+  // Tenant's classes (filter dropdown) + courses (filter dropdown)
+  const { listClasses } = await import("./lib/classes.ts");
+  const classes = await listClasses(tenant.id);
+  const courses = await listCoursesForTenant(tenant.id);
+
+  // Apply filters in memory (dataset is small)
+  const thirtyDays = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const rows = studentRows
+    .map((s) => ({
+      ...s,
+      classes: classesByStudent.get(s.id) ?? [],
+      courses: coursesByStudent.get(s.id) ?? [],
+    }))
+    .filter((s) => !filterClass || s.classes.some((c) => c.id === filterClass))
+    .filter((s) => !filterCourse || s.courses.some((c) => c.id === filterCourse))
+    .filter((s) => !onlyActive || (s.last_active_at && new Date(s.last_active_at).getTime() >= thirtyDays));
+
+  html(res, 200, await layoutHtml({
+    title: "Alunos",
+    tenantName: tenant.name,
+    tenantSlug: tenant.slug,
+      tenantId: tenant.id,
+      tenantPlanId: tenant.planId,
+    tenantStatus: tenant.status,
+    activeNav: "students",
+    admin,
+    body: studentsListHtml({ rows, classes, courses, filterClass, filterCourse, onlyActive }),
+  }));
+}
+
+function studentsListHtml(args: {
+  rows: Array<{ id: string; email: string; display_name: string | null; last_active_at: string | null;
+    classes: Array<{ id: string; name: string }>; courses: Array<{ id: string; name: string }> }>;
+  classes: Array<{ id: string; name: string }>;
+  courses: Array<{ id: string; slug: string; name: string }>;
+  filterClass: string;
+  filterCourse: string;
+  onlyActive: boolean;
+}): string {
+  const fmtDate = (s: string | null) => s ? new Date(s).toLocaleDateString("pt-BR") : "—";
+  return `
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+  <h1 style="margin:0">Alunos</h1>
+  <span style="background:#f3f3f3;border:1px solid #e5e5e5;border-radius:99px;padding:2px 10px;font-size:12px;color:#555">${args.rows.length}</span>
+  <div style="flex:1"></div>
+  <a class="btn" href="students/import">Importar CSV</a>
+</div>
+
+<form method="GET" action="students" style="display:flex;gap:10px;align-items:end;margin-bottom:16px;flex-wrap:wrap">
+  <div><label>Turma</label>
+    <select name="class">
+      <option value="">Todas as turmas</option>
+      ${args.classes.map((c) => `<option value="${esc(c.id)}"${c.id === args.filterClass ? " selected" : ""}>${esc(c.name)}</option>`).join("")}
+    </select>
+  </div>
+  <div><label>Curso</label>
+    <select name="course">
+      <option value="">Todos os cursos</option>
+      ${args.courses.map((c) => `<option value="${esc(c.id)}"${c.id === args.filterCourse ? " selected" : ""}>${esc(c.name)}</option>`).join("")}
+    </select>
+  </div>
+  <div><label><input type="checkbox" name="active" value="1"${args.onlyActive ? " checked" : ""}> Só ativos últimos 30d</label></div>
+  <button type="submit" class="secondary">Filtrar</button>
+</form>
+
+${args.rows.length === 0 ? `
+  <div class="card" style="text-align:center;color:#666">
+    Nenhum aluno por aqui ainda. <a href="students/import">Importar CSV</a> ou aguarde o webhook do Hotmart.
+  </div>
+` : `
+<table>
+  <thead><tr><th>Email</th><th>Nome</th><th>Turmas</th><th>Cursos com acesso</th><th>Última atividade</th></tr></thead>
+  <tbody>
+    ${args.rows.map((s) => `
+      <tr>
+        <td><code>${esc(s.email)}</code></td>
+        <td>${esc(s.display_name ?? "—")}</td>
+        <td>${s.classes.length === 0 ? '<span style="color:#999">—</span>' : s.classes.map((c) => esc(c.name)).join(", ")}</td>
+        <td>${s.courses.length === 0 ? '<span style="color:#999">—</span>' : `<span style="color:#555">${s.courses.length}</span> · ${s.courses.slice(0, 2).map((c) => esc(c.name)).join(", ")}${s.courses.length > 2 ? "…" : ""}`}</td>
+        <td style="color:#666;font-size:12.5px">${fmtDate(s.last_active_at)}</td>
+      </tr>
+    `).join("")}
+  </tbody>
+</table>
+`}`;
+}
+
+// ----- Classes ------------------------------------------------------------
+
+async function classesList(tenant: Tenant, req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const admin = await requireAdmin(tenant, req, res);
+  if (!admin) return;
+  const { listClasses } = await import("./lib/classes.ts");
+  const classes = await listClasses(tenant.id);
+  const url = new URL(req.url ?? "/", "http://x");
+  html(res, 200, await layoutHtml({
+    title: "Turmas",
+    tenantName: tenant.name,
+    tenantSlug: tenant.slug,
+      tenantId: tenant.id,
+      tenantPlanId: tenant.planId,
+    tenantStatus: tenant.status,
+    activeNav: "classes",
+    admin,
+    body: classesListHtml({ classes, msg: url.searchParams.get("msg") ?? undefined }),
+  }));
+}
+
+async function classesPost(tenant: Tenant, req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const admin = await requireAdmin(tenant, req, res);
+  if (!admin) return;
+  const form = await readForm(req);
+  const name = (form.get("name") ?? "").trim();
+  const description = (form.get("description") ?? "").trim() || undefined;
+  if (!name) return redirect(res, `${adminBase(tenant)}/classes?msg=name_required`);
+  try {
+    const { createClass } = await import("./lib/classes.ts");
+    await createClass({ tenantId: tenant.id, name, description });
+  } catch (err) {
+    console.error("Class create failed:", err);
+    return redirect(res, `${adminBase(tenant)}/classes?msg=create_failed`);
+  }
+  redirect(res, `${adminBase(tenant)}/classes?msg=class_created`);
+}
+
+async function classDetail(tenant: Tenant, classId: string, req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const admin = await requireAdmin(tenant, req, res);
+  if (!admin) return;
+  const { findClass, listClassMembers } = await import("./lib/classes.ts");
+  const cls = await findClass(classId, tenant.id);
+  if (!cls) { res.writeHead(404).end("turma não encontrada"); return; }
+  const members = await listClassMembers(classId);
+  const memberIds = new Set(members.map((m) => m.studentId));
+  // Available students (not in this class yet)
+  const allStudents = await sb.select<{ id: string; email: string; display_name: string | null }>(
+    "students",
+    `tenant_id=eq.${tenant.id}&select=id,email,display_name&order=email.asc&limit=500`,
+  );
+  const candidates = allStudents.filter((s) => !memberIds.has(s.id));
+  const courses = (await listCoursesForTenant(tenant.id)).filter((c) => c.ingestStatus === "ready");
+  const url = new URL(req.url ?? "/", "http://x");
+
+  html(res, 200, await layoutHtml({
+    title: cls.name,
+    tenantName: tenant.name,
+    tenantSlug: tenant.slug,
+      tenantId: tenant.id,
+      tenantPlanId: tenant.planId,
+    tenantStatus: tenant.status,
+    activeNav: "classes",
+    admin,
+    body: classDetailHtmlT({ cls, members, candidates, courses, msg: url.searchParams.get("msg") ?? undefined }),
+  }));
+}
+
+async function classAddMember(tenant: Tenant, classId: string, req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const admin = await requireAdmin(tenant, req, res);
+  if (!admin) return;
+  const form = await readForm(req);
+  const studentId = (form.get("student_id") ?? "").trim();
+  if (!studentId) return redirect(res, `${adminBase(tenant)}/classes/${classId}?msg=missing_student`);
+  const { findClass, addClassMember } = await import("./lib/classes.ts");
+  const cls = await findClass(classId, tenant.id);
+  if (!cls) { res.writeHead(404).end("turma não encontrada"); return; }
+  await addClassMember(classId, studentId);
+  redirect(res, `${adminBase(tenant)}/classes/${classId}?msg=member_added`);
+}
+
+async function classRemoveMember(tenant: Tenant, classId: string, req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const admin = await requireAdmin(tenant, req, res);
+  if (!admin) return;
+  const form = await readForm(req);
+  const studentId = (form.get("student_id") ?? "").trim();
+  const { findClass, removeClassMember } = await import("./lib/classes.ts");
+  const cls = await findClass(classId, tenant.id);
+  if (!cls) { res.writeHead(404).end("turma não encontrada"); return; }
+  await removeClassMember(classId, studentId);
+  redirect(res, `${adminBase(tenant)}/classes/${classId}?msg=member_removed`);
+}
+
+async function classGrantCourse(tenant: Tenant, classId: string, req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const admin = await requireAdmin(tenant, req, res);
+  if (!admin) return;
+  const form = await readForm(req);
+  const courseId = (form.get("course_id") ?? "").trim();
+  if (!courseId) return redirect(res, `${adminBase(tenant)}/classes/${classId}?msg=missing_course`);
+  const { findClass, grantCourseToClass } = await import("./lib/classes.ts");
+  const cls = await findClass(classId, tenant.id);
+  if (!cls) { res.writeHead(404).end("turma não encontrada"); return; }
+  const r = await grantCourseToClass({ classId, courseId });
+  redirect(res, `${adminBase(tenant)}/classes/${classId}?msg=granted_${r.granted}`);
+}
+
+async function classDeleteHandler(tenant: Tenant, classId: string, req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const admin = await requireAdmin(tenant, req, res);
+  if (!admin) return;
+  const { findClass, deleteClass } = await import("./lib/classes.ts");
+  const cls = await findClass(classId, tenant.id);
+  if (!cls) { res.writeHead(404).end("turma não encontrada"); return; }
+  await deleteClass(classId, tenant.id);
+  redirect(res, `${adminBase(tenant)}/classes?msg=class_deleted`);
+}
+
+function classesListHtml(args: {
+  classes: Array<{ id: string; name: string; description: string | null; memberCount?: number; createdAt: string }>;
+  msg?: string;
+}): string {
+  const msgs: Record<string, [string, "success" | "error"]> = {
+    class_created: ["Turma criada.", "success"],
+    class_deleted: ["Turma removida.", "success"],
+    name_required: ["Nome da turma é obrigatório.", "error"],
+    create_failed: ["Não foi possível criar (talvez já exista turma com esse nome).", "error"],
+  };
+  const [text, kind] = args.msg ? msgs[args.msg] ?? [args.msg, "error"] : ["", ""];
+  return `
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+  <h1 style="margin:0">Turmas</h1>
+  <span style="background:#f3f3f3;border:1px solid #e5e5e5;border-radius:99px;padding:2px 10px;font-size:12px;color:#555">${args.classes.length}</span>
+</div>
+
+${text ? `<div class="msg ${kind}">${esc(text)}</div>` : ""}
+
+<div class="card">
+  <h3 style="margin-top:0">Nova turma</h3>
+  <form method="POST" action="classes" style="display:grid;grid-template-columns:2fr 3fr auto;gap:10px;align-items:end">
+    <div><label>Nome</label><input name="name" required placeholder="Ex.: Turma Master 2026.1"></div>
+    <div><label>Descrição (opcional)</label><input name="description" placeholder="Quem é essa turma?"></div>
+    <button type="submit">Criar</button>
+  </form>
+</div>
+
+${args.classes.length === 0 ? `
+  <div class="card" style="text-align:center;color:#666">
+    Nenhuma turma criada ainda. Use o formulário acima.
+  </div>
+` : `
+<table>
+  <thead><tr><th>Turma</th><th>Membros</th><th>Criada</th><th></th></tr></thead>
+  <tbody>
+    ${args.classes.map((c) => `
+      <tr>
+        <td><a href="classes/${esc(c.id)}" style="font-weight:500">${esc(c.name)}</a>${c.description ? `<div style="color:#666;font-size:12px">${esc(c.description)}</div>` : ""}</td>
+        <td>${c.memberCount ?? 0}</td>
+        <td style="color:#666;font-size:12.5px">${new Date(c.createdAt).toLocaleDateString("pt-BR")}</td>
+        <td style="text-align:right"><a href="classes/${esc(c.id)}">Ver →</a></td>
+      </tr>
+    `).join("")}
+  </tbody>
+</table>
+`}`;
+}
+
+function classDetailHtmlT(args: {
+  cls: { id: string; name: string; description: string | null; createdAt: string };
+  members: Array<{ studentId: string; email: string; displayName: string | null; addedAt: string }>;
+  candidates: Array<{ id: string; email: string; display_name: string | null }>;
+  courses: Array<{ id: string; slug: string; name: string }>;
+  msg?: string;
+}): string {
+  const msgs: Record<string, [string, "success" | "error"]> = {
+    member_added: ["Aluno adicionado à turma.", "success"],
+    member_removed: ["Aluno removido.", "success"],
+    missing_student: ["Selecione um aluno.", "error"],
+    missing_course: ["Selecione um curso.", "error"],
+  };
+  let text = "", kind: "success" | "error" = "success";
+  if (args.msg) {
+    if (args.msg.startsWith("granted_")) {
+      const n = args.msg.slice("granted_".length);
+      text = `Acesso ao curso concedido a ${n} aluno(s) da turma.`;
+      kind = "success";
+    } else {
+      const m = msgs[args.msg];
+      if (m) [text, kind] = m;
+      else { text = args.msg; kind = "error"; }
+    }
+  }
+
+  return `
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+  <a href="../classes" style="color:#666;text-decoration:none;font-size:13px">← Turmas</a>
+</div>
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+  <h1 style="margin:0">${esc(args.cls.name)}</h1>
+  <span style="background:#f3f3f3;border:1px solid #e5e5e5;border-radius:99px;padding:2px 10px;font-size:12px;color:#555">${args.members.length} aluno(s)</span>
+  <div style="flex:1"></div>
+  <form method="POST" action="${esc(args.cls.id)}/delete" onsubmit="return confirm('Remover esta turma? Isso não revoga os acessos já concedidos.')">
+    <button type="submit" class="danger" style="padding:6px 12px;font-size:12px">Excluir turma</button>
+  </form>
+</div>
+${args.cls.description ? `<p style="color:#666;margin-top:-8px">${esc(args.cls.description)}</p>` : ""}
+${text ? `<div class="msg ${kind}">${esc(text)}</div>` : ""}
+
+<div class="card">
+  <h3 style="margin-top:0">Liberar acesso a um curso</h3>
+  <p class="help">Concede acesso ao curso pra todos os alunos atualmente na turma. Alunos adicionados depois precisam de novo grant.</p>
+  ${args.courses.length === 0
+    ? `<p class="help">Nenhum curso pronto pra liberar. <a href="../courses">Criar/configurar curso</a>.</p>`
+    : `<form method="POST" action="${esc(args.cls.id)}/grant-course" style="display:flex;gap:10px;align-items:end">
+        <div style="flex:1"><label>Curso</label>
+          <select name="course_id">
+            ${args.courses.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("")}
+          </select>
+        </div>
+        <button type="submit" ${args.members.length === 0 ? "disabled" : ""}>Liberar pra ${args.members.length} aluno(s)</button>
+      </form>`}
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0">Adicionar aluno</h3>
+  ${args.candidates.length === 0
+    ? `<p class="help">Não há alunos disponíveis pra adicionar. Use <a href="../students/import">Importar CSV</a> primeiro.</p>`
+    : `<form method="POST" action="${esc(args.cls.id)}/members" style="display:flex;gap:10px;align-items:end">
+        <div style="flex:1"><label>Aluno</label>
+          <select name="student_id">
+            ${args.candidates.map((s) => `<option value="${esc(s.id)}">${esc(s.email)}${s.display_name ? ` · ${esc(s.display_name)}` : ""}</option>`).join("")}
+          </select>
+        </div>
+        <button type="submit">Adicionar</button>
+      </form>`}
+</div>
+
+<h2 style="margin-top:32px">Alunos na turma</h2>
+${args.members.length === 0 ? `
+  <div class="card" style="text-align:center;color:#666">Nenhum aluno ainda.</div>
+` : `
+<table>
+  <thead><tr><th>Email</th><th>Nome</th><th>Entrou em</th><th></th></tr></thead>
+  <tbody>
+    ${args.members.map((m) => `
+      <tr>
+        <td><code>${esc(m.email)}</code></td>
+        <td>${esc(m.displayName ?? "—")}</td>
+        <td style="color:#666;font-size:12.5px">${new Date(m.addedAt).toLocaleDateString("pt-BR")}</td>
+        <td style="text-align:right">
+          <form method="POST" action="${esc(args.cls.id)}/remove" style="display:inline" onsubmit="return confirm('Remover da turma? Não revoga acessos já concedidos.')">
+            <input type="hidden" name="student_id" value="${esc(m.studentId)}">
+            <button type="submit" class="danger" style="padding:4px 10px;font-size:12px">Remover</button>
+          </form>
+        </td>
+      </tr>
+    `).join("")}
+  </tbody>
+</table>
+`}`;
+}
+
 // ----- Course detail + content ingest -------------------------------------
 
 interface ResolvedCourse {
@@ -595,10 +998,12 @@ async function courseDetail(
   if (!admin) return;
   const course = await resolveCourseBySlug(tenant.id, courseSlug);
   if (!course) {
-    return html(res, 404, layoutHtml({
+    return html(res, 404, await layoutHtml({
       title: "Curso não encontrado",
       tenantName: tenant.name,
       tenantSlug: tenant.slug,
+      tenantId: tenant.id,
+      tenantPlanId: tenant.planId,
     tenantStatus: tenant.status,
       activeNav: "courses",
       admin,
@@ -628,10 +1033,12 @@ async function courseDetail(
   );
 
   const q = getQuery(req);
-  html(res, 200, layoutHtml({
+  html(res, 200, await layoutHtml({
     title: course.name,
     tenantName: tenant.name,
     tenantSlug: tenant.slug,
+      tenantId: tenant.id,
+      tenantPlanId: tenant.planId,
     tenantStatus: tenant.status,
     activeNav: "courses",
     admin,
@@ -765,10 +1172,12 @@ async function planPage(tenant: Tenant, req: IncomingMessage, res: ServerRespons
     listPlans({ publicOnly: true }),
   ]);
   if (!current) {
-    return html(res, 500, layoutHtml({
+    return html(res, 500, await layoutHtml({
       title: "Plano",
       tenantName: tenant.name,
       tenantSlug: tenant.slug,
+      tenantId: tenant.id,
+      tenantPlanId: tenant.planId,
     tenantStatus: tenant.status,
       activeNav: "plan",
       admin,
@@ -777,10 +1186,12 @@ async function planPage(tenant: Tenant, req: IncomingMessage, res: ServerRespons
   }
   const usage = await getUsage(tenant.id, current, tenant.status);
 
-  html(res, 200, layoutHtml({
+  html(res, 200, await layoutHtml({
     title: "Plano e Uso",
     tenantName: tenant.name,
     tenantSlug: tenant.slug,
+      tenantId: tenant.id,
+      tenantPlanId: tenant.planId,
     tenantStatus: tenant.status,
     activeNav: "plan",
     admin,
@@ -861,10 +1272,12 @@ async function courseInsights(
   const { getCourseStudentActivity } = await import("./lib/student-progress.ts");
   const students = await getCourseStudentActivity(tenant.id, course.id);
 
-  html(res, 200, layoutHtml({
+  html(res, 200, await layoutHtml({
     title: `Insights — ${course.name}`,
     tenantName: tenant.name,
     tenantSlug: tenant.slug,
+      tenantId: tenant.id,
+      tenantPlanId: tenant.planId,
     tenantStatus: tenant.status,
     activeNav: "courses",
     admin,
@@ -959,15 +1372,17 @@ const COMMON_CSS = `
   hr { border: 0; border-top: 1px solid #eee; margin: 24px 0; }
 `;
 
-function layoutHtml(args: {
+async function layoutHtml(args: {
   title: string;
+  tenantId?: string;
   tenantName: string;
   tenantSlug?: string;
   tenantStatus?: string;
+  tenantPlanId?: string;
   activeNav?: string;
   admin?: TenantAdmin;
   body: string;
-}): string {
+}): Promise<string> {
   const slug = args.tenantSlug ?? "";
   const adminBaseUrl = `/t/${slug}/admin`;
 
@@ -1013,6 +1428,28 @@ ${banner}
 </body></html>`;
   }
 
+  // Sidebar usage box (Phase 8.2): plan name + 4 mini bars + CTA to addons.
+  // Computed only when we have both tenantId and tenantPlanId. ~4 PostgREST
+  // queries per render; resolveTenantBySlug cache (60s) absorbs most.
+  let sidebarFooterBox: string | undefined;
+  if (args.tenantId && args.tenantPlanId) {
+    try {
+      const { getPlan, getUsage } = await import("./lib/plans.ts");
+      const plan = await getPlan(args.tenantPlanId);
+      if (plan) {
+        const usage = await getUsage(args.tenantId, plan, args.tenantStatus ?? "active");
+        sidebarFooterBox = sidebarUsageBoxHtml({
+          planName: plan.name,
+          isTrial: args.tenantStatus === "trial",
+          usage,
+          adminBaseUrl,
+        });
+      }
+    } catch (err) {
+      console.error("[layoutHtml] usage box compute failed:", err);
+    }
+  }
+
   return adminShell({
     pageTitle: args.title,
     brandLabel: args.tenantName,
@@ -1022,7 +1459,8 @@ ${banner}
       items: [
         { id: "dashboard",    label: "Dashboard",    href: `${adminBaseUrl}`,                       icon: icons.dashboard },
         { id: "courses",      label: "Cursos",       href: `${adminBaseUrl}/courses`,               icon: icons.courses },
-        { id: "students",     label: "Alunos",       href: `${adminBaseUrl}/students/import`,       icon: icons.students },
+        { id: "students",     label: "Alunos",       href: `${adminBaseUrl}/students`,              icon: icons.students },
+        { id: "classes",      label: "Turmas",       href: `${adminBaseUrl}/classes`,               icon: icons.tenants },
         { id: "integrations", label: "Integrações",  href: `${adminBaseUrl}/integrations`,          icon: icons.plug },
         { id: "plan",         label: "Plano e uso",  href: `${adminBaseUrl}/plan`,                  icon: icons.plan },
       ],
@@ -1031,13 +1469,59 @@ ${banner}
     statusBadge: badge,
     userEmail: args.admin.email,
     logoutHref: `${adminBaseUrl}/logout`,
+    sidebarFooterBox,
     banner,
     body: args.body,
   });
 }
 
+function sidebarUsageBoxHtml(args: {
+  planName: string;
+  isTrial: boolean;
+  usage: {
+    courses: { used: number; limit: number | null };
+    transcribeMinutesThisMonth: { used: number; limit: number | null };
+    activeStudents: { used: number; limit: number | null };
+    kbBytes: { used: number; limit: number | null };
+  };
+  adminBaseUrl: string;
+}): string {
+  const row = (label: string, used: string, limit: string, pct: number) => {
+    const cls = pct >= 90 ? "danger" : pct >= 70 ? "warn" : "";
+    return `<div class="ax-usage-row">
+      <div class="lbl"><span>${label}</span><span><strong>${used}</strong>/${limit}</span></div>
+      <div class="bar"><div class="${cls}" style="width:${Math.min(100, pct).toFixed(1)}%"></div></div>
+    </div>`;
+  };
+  const safePct = (used: number, limit: number | null): number => limit == null ? 0 : Math.round((used / limit) * 1000) / 10;
+  const fmtMb = (b: number) => `${(b / 1024 / 1024).toFixed(0)}MB`;
+  return `<div class="ax-usage-box">
+    <div class="ax-usage-header">
+      <span class="ax-usage-plan">${esc(args.planName)}</span>
+      <span class="ax-usage-tag${args.isTrial ? " trial" : ""}">${args.isTrial ? "Trial" : "Ativo"}</span>
+    </div>
+    ${row("Cursos",
+      String(args.usage.courses.used),
+      args.usage.courses.limit == null ? "∞" : String(args.usage.courses.limit),
+      safePct(args.usage.courses.used, args.usage.courses.limit))}
+    ${row("Transcrição",
+      `${(args.usage.transcribeMinutesThisMonth.used / 60).toFixed(1)}h`,
+      args.usage.transcribeMinutesThisMonth.limit == null ? "∞" : `${(args.usage.transcribeMinutesThisMonth.limit / 60).toFixed(0)}h`,
+      safePct(args.usage.transcribeMinutesThisMonth.used, args.usage.transcribeMinutesThisMonth.limit))}
+    ${row("Alunos",
+      String(args.usage.activeStudents.used),
+      args.usage.activeStudents.limit == null ? "∞" : String(args.usage.activeStudents.limit),
+      safePct(args.usage.activeStudents.used, args.usage.activeStudents.limit))}
+    ${row("Storage",
+      fmtMb(args.usage.kbBytes.used),
+      args.usage.kbBytes.limit == null ? "∞" : fmtMb(args.usage.kbBytes.limit),
+      safePct(args.usage.kbBytes.used, args.usage.kbBytes.limit))}
+    <a class="ax-usage-cta" href="${esc(args.adminBaseUrl)}/plan">Ver plano</a>
+  </div>`;
+}
 
-function adminLoginHtml(args: { tenantName: string; tenantSlug: string; tenantStatus?: string; error?: string; sent: boolean }): string {
+
+async function adminLoginHtml(args: { tenantName: string; tenantSlug: string; tenantStatus?: string; error?: string; sent: boolean }): Promise<string> {
   const errors: Record<string, string> = {
     email_invalid: "Email inválido.",
     send_failed: "Não foi possível enviar o email agora. Tente de novo.",
@@ -1673,6 +2157,14 @@ export type AdminRouteMatch =
   | { type: "plan" }
   | { type: "students-import-get" }
   | { type: "students-import-post" }
+  | { type: "students-list" }
+  | { type: "classes-list" }
+  | { type: "classes-post" }
+  | { type: "class-detail"; classId: string }
+  | { type: "class-add-member"; classId: string }
+  | { type: "class-remove-member"; classId: string }
+  | { type: "class-grant-course"; classId: string }
+  | { type: "class-delete"; classId: string }
   | { type: "logout" };
 
 export function matchAdminRoute(suffix: string, method: string): AdminRouteMatch | null {
@@ -1689,6 +2181,20 @@ export function matchAdminRoute(suffix: string, method: string): AdminRouteMatch
   if (method === "POST" && path === "/courses") return { type: "courses-post" };
   if (method === "GET"  && path === "/students/import") return { type: "students-import-get" };
   if (method === "POST" && path === "/students/import") return { type: "students-import-post" };
+  if (method === "GET"  && path === "/students") return { type: "students-list" };
+  if (method === "GET"  && path === "/classes") return { type: "classes-list" };
+  if (method === "POST" && path === "/classes") return { type: "classes-post" };
+  // Class-scoped subroutes
+  const classMatch = path.match(/^\/classes\/([0-9a-f-]{36})(\/[a-z-]+)?$/i);
+  if (classMatch) {
+    const classId = classMatch[1];
+    const tail = classMatch[2] ?? "";
+    if (method === "GET"  && tail === "")                return { type: "class-detail", classId };
+    if (method === "POST" && tail === "/members")        return { type: "class-add-member", classId };
+    if (method === "POST" && tail === "/remove")         return { type: "class-remove-member", classId };
+    if (method === "POST" && tail === "/grant-course")   return { type: "class-grant-course", classId };
+    if (method === "POST" && tail === "/delete")         return { type: "class-delete", classId };
+  }
   if (method === "GET"  && path === "/logout")  return { type: "logout" };
 
   // Course-scoped routes: /courses/:slug/...
@@ -1735,6 +2241,14 @@ export async function handleAdminRoute(
     case "plan":                return planPage(tenant, req, res);
     case "students-import-get": return studentsImportGet(tenant, req, res);
     case "students-import-post": return studentsImportPost(tenant, req, res);
+    case "students-list":        return studentsList(tenant, req, res);
+    case "classes-list":         return classesList(tenant, req, res);
+    case "classes-post":         return classesPost(tenant, req, res);
+    case "class-detail":         return classDetail(tenant, match.classId, req, res);
+    case "class-add-member":     return classAddMember(tenant, match.classId, req, res);
+    case "class-remove-member":  return classRemoveMember(tenant, match.classId, req, res);
+    case "class-grant-course":   return classGrantCourse(tenant, match.classId, req, res);
+    case "class-delete":         return classDeleteHandler(tenant, match.classId, req, res);
     case "logout":              return logout(tenant, req, res);
   }
 }

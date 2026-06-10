@@ -50,6 +50,9 @@ export interface ShellArgs {
   /** Email shown in sidebar footer; click → logout href */
   userEmail?: string;
   logoutHref?: string;
+  /** Optional HTML block rendered in the sidebar above the user email
+   *  (Phase 8.2 plan usage box: plan name + usage bars + addons CTA). */
+  sidebarFooterBox?: string;
   /** Optional CTAs in the topbar right (e.g. "Novo curso") */
   topbarActions?: string;
   /** Banner above the topbar (suspended/canceled/trial messages) */
@@ -106,6 +109,7 @@ ${args.banner ?? ""}
       ${args.brandSub ? `<div class="ax-brand-sub">${esc(args.brandSub)}</div>` : ""}
     </a>
     <nav class="ax-nav">${navHtml}</nav>
+    ${args.sidebarFooterBox ?? ""}
     ${userBlock}
   </aside>
 
@@ -234,6 +238,23 @@ a { color: inherit; text-decoration: none }
 .ax-nav-item:hover { background: var(--ax-surface-2); color: var(--ax-text) }
 .ax-nav-item.ax-active { background: #ececec; color: var(--ax-text); font-weight: 500 }
 .ax-nav-icon { display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; color:inherit; opacity:0.9 }
+
+/* ---------- Sidebar plan/usage box (Phase 8.2) ---------- */
+.ax-usage-box { background: var(--ax-surface-2); border: 1px solid var(--ax-border); border-radius: 10px; padding: 12px 14px; margin-top: 16px }
+.ax-usage-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px }
+.ax-usage-plan { font-weight: 600; font-size: 13px; color: var(--ax-text); letter-spacing: -0.005em }
+.ax-usage-tag { background:#fff; border:1px solid var(--ax-border); border-radius: 99px; padding: 1px 7px; font-size: 10.5px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ax-text-soft) }
+.ax-usage-tag.trial { background:#fff8e6; border-color:#f0dca0; color:#8a5a00 }
+.ax-usage-row { font-size: 11.5px; color: var(--ax-text-soft); margin-bottom: 8px }
+.ax-usage-row:last-child { margin-bottom: 0 }
+.ax-usage-row .lbl { display:flex; justify-content:space-between; margin-bottom: 4px }
+.ax-usage-row .lbl strong { color: var(--ax-text); font-weight: 500 }
+.ax-usage-row .bar { background:#fff; border:1px solid var(--ax-border); height: 5px; border-radius: 99px; overflow: hidden }
+.ax-usage-row .bar > div { height: 100%; background: var(--ax-text); border-radius: 99px; transition: width 0.2s ease }
+.ax-usage-row .bar > div.warn { background: #f59e0b }
+.ax-usage-row .bar > div.danger { background: #dc2626 }
+.ax-usage-cta { display:block; margin-top: 10px; text-align: center; font-size: 12px; padding: 6px 10px; background: var(--ax-text); color: #fff; border-radius: 6px; text-decoration: none }
+.ax-usage-cta:hover { background: var(--ax-accent-hover) }
 
 /* ---------- Sidebar user block ---------- */
 .ax-user { border-top: 1px solid var(--ax-border); padding-top: 12px; margin-top: 12px; display:flex; align-items:center; gap:8px }
