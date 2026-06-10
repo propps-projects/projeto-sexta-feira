@@ -1325,7 +1325,10 @@ async function enterprisePost(req: IncomingMessage, res: ServerResponse): Promis
   // Send via Resend to the sales inbox. We don't store lead data in the
   // DB yet — Phase 6 may add a `leads` table; for now an email + Slack
   // (if wired) is enough not to lose anyone.
-  const SALES_INBOX = process.env.SALES_INBOX || "support@askine.cc";
+  // SALES_INBOX is the operator's inbox where /enterprise leads land.
+  // Defaults to rafael@infosaas.co (Rafael's working email); override
+  // with the env var if a dedicated sales mailbox exists later.
+  const SALES_INBOX = process.env.SALES_INBOX || "rafael@infosaas.co";
   const from = process.env.RESEND_FROM || "Askine <login@askine.cc>";
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {

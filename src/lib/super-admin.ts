@@ -1,7 +1,7 @@
 /**
  * Super-admin (platform operator) auth — distinct from tenant-admin.
  *
- * Whitelist by env: SUPER_ADMIN_EMAILS=support@askine.cc,outro@askine.cc
+ * Whitelist by env: SUPER_ADMIN_EMAILS=rafael@infosaas.co,outro@infosaas.co
  * Magic-link login reuses the magic_links table with tenant_id=NULL and
  * intent='super_admin_login'. Sessions live in a separate signed cookie
  * (askine_super) so they don't mix with tenant-admin sessions.

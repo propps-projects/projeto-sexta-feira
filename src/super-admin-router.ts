@@ -378,7 +378,7 @@ function loginHtml(args: { error?: string; sent: boolean }): string {
   ${errMsg ? `<div class="msg error">${esc(errMsg)}</div>` : ""}
   <form method="POST" action="/super-admin/login">
     <label>Email</label>
-    <input type="email" name="email" autofocus required placeholder="voce@askine.cc">
+    <input type="email" name="email" autofocus required placeholder="voce@infosaas.co">
     <div style="margin-top:16px"><button type="submit">Enviar link</button></div>
   </form>
 </div>`,
