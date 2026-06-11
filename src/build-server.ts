@@ -797,20 +797,22 @@ export function buildServer(
       return {
         content: [{ type: "text", text: label }],
         structuredContent,
-        _meta: {
-          // Result-level pointer → the stateless v3 URI with embedded data.
-          // Hosts that honor `_meta.ui.resourceUri` (Claude MCP Apps) will
-          // resolve THIS URI and render the hydrated HTML directly.
-          ui: { resourceUri: perCallUri },
-          ...(adapterMode === "appsSdk"
-            ? {
-                // ChatGPT Apps SDK template lookup: keep the static v2 URI
-                // (it caches by template). The structuredContent above still
-                // gets posted to the widget via window.openai.toolOutput.
-                "openai/outputTemplate": PLAYER_WIDGET_URI_V2,
-              }
-            : {}),
-        },
+        // The _meta shape diverges per host because they cache differently:
+        //
+        // ChatGPT Apps SDK: keys the widget cache by `openai/outputTemplate`
+        //   URI in browser localStorage. If we send a unique per-call URI
+        //   the cache explodes — observed in production as QuotaExceededError
+        //   on "cache/user-.../system-connectors" + "Failed to fetch template"
+        //   in the widget slot. Solution: ONLY emit the static v2 URI here;
+        //   structuredContent above still flows through window.openai.toolOutput
+        //   for hydration.
+        //
+        // Claude MCP Apps: honors `_meta.ui.resourceUri` and re-fetches on
+        //   every conversation open. The per-call v3 URI is exactly what we
+        //   want: stateless, data embedded inline, survives deploys.
+        _meta: adapterMode === "appsSdk"
+          ? { "openai/outputTemplate": PLAYER_WIDGET_URI_V2 }
+          : { ui: { resourceUri: perCallUri } },
       };
     },
   );
