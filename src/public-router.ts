@@ -843,7 +843,8 @@ export function matchPublicRoute(path: string, method: string): PublicRouteMatch
   if (method === "GET"  && p === "/logo.svg")   return { type: "logo-svg" };
   if (method === "GET"  && p === "/favicon.ico") return { type: "favicon" };
   if (method === "GET"  && p === "/og-image.svg") return { type: "og-image" };
-  if (method === "GET"  && (p === "/" || p === "")) return { type: "home" };
+  // A raiz "/" agora é servida pela landing page nova (Astro) via tryServeLanding
+  // no server-http. A home antiga (homePage) fica desativada aqui de propósito.
   return null;
 }
 
