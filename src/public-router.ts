@@ -210,9 +210,12 @@ async function signupPost(req: IncomingMessage, res: ServerResponse): Promise<vo
       priceId: price.validapayPriceId,
       customer: { email, documentNumber: documentRaw },
       // Mensal = só cartão (assinatura recorrente). Anual = PIX à vista ou cartão
-      // até 12× — o parcelamento e o repasse de juros ao cliente são escolhidos na
-      // página hospedada do ValidaPay (checkout transparente fica pra uma fase futura).
+      // até 12× com os juros do cartão repassados ao cliente (freeInstallments: 1 →
+      // só a 1ª parcela/à vista fica sem juros). Tudo na página hospedada do ValidaPay.
       allowedPaymentMethods: recurrence === "ANNUAL" ? ["pix", "creditcard"] : ["creditcard"],
+      ...(recurrence === "ANNUAL"
+        ? { maxInstallments: 12, passFeesToCustomer: true, freeInstallments: 1 }
+        : {}),
       ...(validatedCouponCode ? { couponCode: validatedCouponCode } : {}),
     });
     await sb.update("tenants", `id=eq.${tenant.id}`, {

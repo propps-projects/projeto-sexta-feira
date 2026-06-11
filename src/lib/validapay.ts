@@ -290,12 +290,26 @@ export async function createCheckoutSession(args: {
   customer: { email: string; documentNumber: string };
   allowedPaymentMethods?: Array<"pix" | "creditcard" | "boleto">;
   couponCode?: string;
+  // Card installments on the hosted checkout (confirmed supported by ValidaPay —
+  // the older docs omitted these). maxInstallments caps the dropdown;
+  // passFeesToCustomer pushes the card interest onto the buyer; freeInstallments
+  // is how many leading installments stay interest-free (default 1 = only à vista).
+  maxInstallments?: number;
+  passFeesToCustomer?: boolean;
+  freeInstallments?: number;
+  successUrl?: string;
+  failureUrl?: string;
 }): Promise<CheckoutSession> {
   return api<CheckoutSession>("POST", "/v1/checkouts/session", {
     priceId: args.priceId,
     allowedPaymentMethods: args.allowedPaymentMethods ?? ["pix", "creditcard"],
     customer: args.customer,
     ...(args.couponCode ? { couponCode: args.couponCode } : {}),
+    ...(args.maxInstallments != null ? { maxInstallments: args.maxInstallments } : {}),
+    ...(args.passFeesToCustomer != null ? { passFeesToCustomer: args.passFeesToCustomer } : {}),
+    ...(args.freeInstallments != null ? { freeInstallments: args.freeInstallments } : {}),
+    ...(args.successUrl ? { successUrl: args.successUrl } : {}),
+    ...(args.failureUrl ? { failureUrl: args.failureUrl } : {}),
   });
 }
 
