@@ -1,4 +1,7 @@
 node_modules
+landing/node_modules
+landing/dist
+landing/.astro
 .env
 .env.local
 .env.*.local

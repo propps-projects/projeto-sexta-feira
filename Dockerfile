@@ -12,6 +12,18 @@
 # In EasyPanel: point at this Dockerfile, set the env vars listed above,
 # expose port 3333, attach a domain.
 
+# ---- Landing page (Astro) build stage ----
+# Builds the static LP into /lp/dist; copied into the runtime image below and
+# served at "/" by server-http.ts (tryServeLanding). The MCP endpoints
+# (/mcp, /mcp-gpt, ...) are untouched — the LP is only a fallback for "/".
+FROM node:20-bookworm-slim AS lp
+WORKDIR /lp
+COPY landing/package.json landing/package-lock.json* ./
+RUN npm ci --no-audit --no-fund
+COPY landing/ ./
+RUN npm run build
+
+# ---- Runtime stage ----
 FROM node:20-bookworm-slim
 
 # ffmpeg is only needed if you re-run ingest:2-audio inside the container.
@@ -39,6 +51,9 @@ COPY scripts ./scripts
 COPY data ./data
 COPY assets ./assets
 COPY .env.example ./
+
+# Built landing page (static) — served at "/" by server-http.ts.
+COPY --from=lp /lp/dist ./landing/dist
 
 # Default port; override with `-e PORT=...`
 ENV PORT=3333 \

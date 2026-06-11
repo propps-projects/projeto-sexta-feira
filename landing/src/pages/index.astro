@@ -1,0 +1,25 @@
+---
+import Base from '../layouts/Base.astro';
+import Nav from '../components/sections/Nav.tsx';
+import Hero from '../components/sections/Hero.tsx';
+import Features from '../components/sections/Features.tsx';
+import HowItWorks from '../components/sections/HowItWorks.tsx';
+import Protected from '../components/sections/Protected.tsx';
+import Smarter from '../components/sections/Smarter.tsx';
+import Pricing from '../components/sections/Pricing.tsx';
+import Faq from '../components/sections/Faq.tsx';
+import FinalCta from '../components/sections/FinalCta.tsx';
+import Footer from '../components/sections/Footer.tsx';
+---
+<Base>
+  <Nav client:load />
+  <Hero client:visible />
+  <Features client:visible />
+  <HowItWorks client:visible />
+  <Protected client:visible />
+  <Smarter client:visible />
+  <Pricing client:visible />
+  <Faq client:visible />
+  <FinalCta client:visible />
+  <Footer />
+</Base>

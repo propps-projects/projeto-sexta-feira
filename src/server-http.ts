@@ -21,6 +21,7 @@ import { matchAdminRoute, handleAdminRoute } from "./admin-router.ts";
 import { matchSuperAdminRoute, handleSuperAdminRoute } from "./super-admin-router.ts";
 import { matchPublicRoute, handlePublicRoute } from "./public-router.ts";
 import { isBrandRoute, handleBrandRoute } from "./brand-router.ts";
+import { tryServeLanding } from "./landing-router.ts";
 import { initObservability, captureError } from "./lib/observability.ts";
 
 // Init Sentry before the server starts handling requests so that
@@ -303,7 +304,13 @@ const httpServer = http.createServer(async (req, res) => {
     }
 
     const route = matchRoute(req.url);
-    if (!route) { res.writeHead(404).end("not found"); return; }
+    if (!route) {
+      // Nenhuma rota de API casou → tenta servir a landing page estática.
+      // (mcp / mcp-gpt / webhooks / oauth / tenants já foram tratados acima.)
+      if (await tryServeLanding(pathOnlyEarly, req.method ?? "GET", res)) return;
+      res.writeHead(404).end("not found");
+      return;
+    }
 
     // ---------- Hotmart webhook ----------
     if (route.kind === "hotmart") {
