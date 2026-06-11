@@ -1,0 +1,28 @@
+---
+import '@fontsource/aleo/400.css';
+import '@fontsource/aleo/600.css';
+import '@fontsource/aleo/700.css';
+import '../styles/tokens.css';
+
+interface Props { title?: string; description?: string; }
+const {
+  title = 'Askine — Seu curso dentro do ChatGPT e do Claude em 5 minutos',
+  description = 'Transforme as maiores ferramentas de IA do mundo em um tutor treinado com o seu conteúdo. Sem criar plataforma, sem custo de tokens.',
+} = Astro.props;
+---
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
