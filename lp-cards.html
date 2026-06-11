@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Askine — Planos</title>
+<style>
+  :root{
+    --bg:#0b0f17; --card:#121826; --card-pro:#16203a;
+    --ink:#e8edf6; --muted:#8b97ad; --line:#243049;
+    --accent:#6d8bff; --accent2:#9b6dff; --ok:#3ddc97;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    background:radial-gradient(1200px 600px at 50% -10%,#1a2236 0%,var(--bg) 60%);
+    color:var(--ink);min-height:100vh;padding:64px 20px;
+  }
+  .wrap{max-width:1080px;margin:0 auto;text-align:center}
+  h1{font-size:38px;font-weight:800;letter-spacing:-.02em}
+  .sub{color:var(--muted);margin-top:12px;font-size:17px}
+
+  /* Toggle */
+  .toggle{display:inline-flex;align-items:center;gap:10px;margin:34px 0 8px;
+    background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px}
+  .toggle button{border:0;background:transparent;color:var(--muted);font-size:15px;
+    font-weight:600;padding:10px 22px;border-radius:999px;cursor:pointer;transition:.2s}
+  .toggle button.active{background:var(--accent);color:#fff}
+  .save-pill{display:inline-block;margin-left:6px;font-size:12px;font-weight:700;
+    color:var(--ok);background:rgba(61,220,151,.12);padding:3px 9px;border-radius:999px}
+
+  /* Grid */
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:40px;text-align:left}
+  @media(max-width:880px){.grid{grid-template-columns:1fr;max-width:420px;margin-inline:auto}}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:20px;
+    padding:30px 26px;display:flex;flex-direction:column;position:relative}
+  .card.pro{background:var(--card-pro);border-color:var(--accent);
+    box-shadow:0 0 0 1px var(--accent),0 20px 60px -20px rgba(109,139,255,.55);transform:translateY(-8px)}
+  @media(max-width:880px){.card.pro{transform:none}}
+
+  .badge{position:absolute;top:-13px;left:50%;transform:translateX(-50%);
+    background:linear-gradient(90deg,var(--accent),var(--accent2));color:#fff;
+    font-size:12px;font-weight:700;padding:5px 14px;border-radius:999px;letter-spacing:.02em}
+
+  .tier{font-size:14px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+  .card.pro .tier{color:#a9bbff}
+  .persona{color:var(--muted);font-size:14px;margin-top:4px}
+
+  .price{margin:22px 0 4px;display:flex;align-items:baseline;gap:6px}
+  .price .val{font-size:42px;font-weight:800;letter-spacing:-.02em}
+  .price .per{color:var(--muted);font-size:16px}
+  .billed{color:var(--muted);font-size:13px;min-height:18px}
+  .billed b{color:var(--ok)}
+
+  .cta{margin:24px 0 26px;display:block;text-align:center;text-decoration:none;
+    font-weight:700;font-size:15px;padding:13px;border-radius:12px;
+    background:#1b2436;color:var(--ink);border:1px solid var(--line);transition:.2s}
+  .card.pro .cta{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#fff;border:0}
+  .cta:hover{filter:brightness(1.1)}
+
+  ul{list-style:none;display:flex;flex-direction:column;gap:13px}
+  li{display:flex;gap:11px;align-items:flex-start;font-size:14.5px;color:#cdd6e6}
+  li svg{flex:none;margin-top:2px}
+  li b{color:var(--ink)}
+
+  .foot{margin-top:34px;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Escolha seu plano</h1>
+  <p class="sub">Hospede, transcreva e dê vida aos seus cursos com IA. Cancele quando quiser.</p>
+
+  <div class="toggle">
+    <button id="btnMensal" class="active" onclick="setMode('mensal')">Mensal</button>
+    <button id="btnAnual" onclick="setMode('anual')">Anual <span class="save-pill">2 meses grátis</span></button>
+  </div>
+
+  <div class="grid">
+    <!-- START -->
+    <div class="card">
+      <div class="tier">Start</div>
+      <div class="persona">Para quem está começando / low-ticket</div>
+      <div class="price"><span class="val" data-price="start">R$ 147</span><span class="per">/mês</span></div>
+      <div class="billed" data-billed="start">cobrado mensalmente</div>
+      <a class="cta" href="#">Começar agora</a>
+      <ul>
+        <li>✓ <span><b>1</b> curso</span></li>
+        <li>✓ <span><b>25h</b> de transcrição/mês <span style="color:var(--muted)">(~75 aulas)</span></span></li>
+        <li>✓ <span><b>500</b> alunos ativos</span></li>
+        <li>✓ <span><b>100 MB</b> de armazenamento</span></li>
+        <li>✓ <span>Tutor IA integrado</span></li>
+      </ul>
+    </div>
+
+    <!-- PRO -->
+    <div class="card pro">
+      <div class="badge">MAIS POPULAR</div>
+      <div class="tier">Pro</div>
+      <div class="persona">O equilíbrio perfeito — o chefe da casa</div>
+      <div class="price"><span class="val" data-price="pro">R$ 297</span><span class="per">/mês</span></div>
+      <div class="billed" data-billed="pro">cobrado mensalmente</div>
+      <a class="cta" href="#">Assinar o Pro</a>
+      <ul>
+        <li>✓ <span><b>3</b> cursos</span></li>
+        <li>✓ <span><b>50h</b> de transcrição/mês <span style="color:var(--muted)">(~150 aulas)</span></span></li>
+        <li>✓ <span><b>1.000</b> alunos ativos</span></li>
+        <li>✓ <span><b>500 MB</b> de armazenamento</span></li>
+        <li>✓ <span>Tutor IA integrado</span></li>
+      </ul>
+    </div>
+
+    <!-- SCALE -->
+    <div class="card">
+      <div class="tier">Scale</div>
+      <div class="persona">Para o negócio que já escalou</div>
+      <div class="price"><span class="val" data-price="scale">R$ 497</span><span class="per">/mês</span></div>
+      <div class="billed" data-billed="scale">cobrado mensalmente</div>
+      <a class="cta" href="#">Assinar o Scale</a>
+      <ul>
+        <li>✓ <span><b>10</b> cursos</span></li>
+        <li>✓ <span><b>90h</b> de transcrição/mês <span style="color:var(--muted)">(~270 aulas)</span></span></li>
+        <li>✓ <span><b>2.500</b> alunos ativos</span></li>
+        <li>✓ <span><b>2 GB</b> de armazenamento</span></li>
+        <li>✓ <span>Tutor IA integrado</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <p class="foot">Anual no cartão em até 12× — sai mais barato por mês que o plano mensal. PIX à vista também disponível.</p>
+</div>
+
+<script>
+  const DATA = {
+    mensal: {
+      start: { price:'R$ 147', billed:'cobrado mensalmente' },
+      pro:   { price:'R$ 297', billed:'cobrado mensalmente' },
+      scale: { price:'R$ 497', billed:'cobrado mensalmente' },
+    },
+    anual: {
+      start: { price:'R$ 122,50', billed:'cobrado R$ 1.470/ano · <b>economize R$ 294</b>' },
+      pro:   { price:'R$ 247,50', billed:'cobrado R$ 2.970/ano · <b>economize R$ 594</b>' },
+      scale: { price:'R$ 414',    billed:'cobrado R$ 4.970/ano · <b>economize R$ 994</b>' },
+    }
+  };
+  function setMode(mode){
+    document.getElementById('btnMensal').classList.toggle('active', mode==='mensal');
+    document.getElementById('btnAnual').classList.toggle('active', mode==='anual');
+    for(const k of ['start','pro','scale']){
+      document.querySelector(`[data-price="${k}"]`).textContent = DATA[mode][k].price;
+      document.querySelector(`[data-billed="${k}"]`).innerHTML = DATA[mode][k].billed;
+    }
+  }
+</script>
+</body>
+</html>

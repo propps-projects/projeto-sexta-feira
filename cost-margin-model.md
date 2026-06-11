@@ -1,8 +1,11 @@
 # Askine — Modelo de Custo × Preço × Margem
 
-> Custos de Whisper/storage/NF vêm do código; **taxas ValidaPay são as reais do painel**; **Supabase é free hoje** → infra ~R$ 0 por tenant. Hospedagem é overhead fixo (⚠️ valor a confirmar).
+> **Estrutura:** 3 tiers de valor (Start/Pro/Scale) × toggle de cobrança **Mensal ↔ Anual** (anual = 2 meses grátis, ~17%).
+> **Cota de transcrição = MENSAL e RENOVÁVEL** (sem rollover — use-it-or-lose-it). Custo de Whisper é variável e recorre conforme o uso do mês.
+> Dimensionamento: cotas generosas o bastante pra cobrir quase todo mundo → **add-on é válvula de emergência, não fonte de lucro.**
+> Taxas ValidaPay reais · **juros do cartão repassados ao cliente** · **NF 6% sobre o bruto** · Supabase free (infra/tenant ≈ R$0) · Hospedagem R$200/mês.
 >
-> **Data:** 2026-06-10 · **Câmbio embutido:** 6 BRL/USD
+> **Data:** 2026-06-11 · Câmbio: 6 BRL/USD
 
 ---
 
@@ -10,146 +13,111 @@
 
 | Variável | Valor | Tipo | Status |
 |---|---|---|---|
-| Whisper (transcrição) | **R$ 2,16 / hora** | variável (one-time) | ✅ código |
-| Storage | R$ 0,10 / GB·mês | variável | ✅ código (dentro do free tier ≈ R$ 0) |
-| Nota Fiscal (Simples) | **6% do preço** | variável | ✅ código |
-| ValidaPay — PIX | **R$ 0,47 fixo** | variável | ✅ real |
-| ValidaPay — Boleto | R$ 1,47 fixo | variável | ✅ real |
-| ValidaPay — Cartão D+30 | **% por parcela + R$ 0,17** (tabela abaixo) | variável | ✅ real |
-| **Supabase** | **R$ 0 (free tier)** → ~R$ 150/mês (Pro) ao escalar | **fixo do projeto** | ✅ confirmado |
-| **Hospedagem (EasyPanel/VPS)** | ⚠️ a confirmar | **fixo do projeto** | ⚠️ falta valor |
+| Whisper (transcrição) | **R$ 2,16 / hora** | variável **recorrente** (por uso/mês) | ✅ código |
+| Storage | R$ 0,10 / GB·mês (free ≈ R$ 0) | variável | ✅ código |
+| Nota Fiscal (Simples) | **6% do valor bruto da venda** | variável | ✅ confirmado |
+| ValidaPay — PIX à vista | **R$ 0,47 fixo** | variável | ✅ real |
+| ValidaPay — Cartão | % por parcela + R$ 0,17 — **juros repassados ao cliente** | **≈ R$ 0 pra mim** | ✅ real |
+| Supabase | R$ 0 (free) → ~R$ 150/mês (Pro) ao escalar | fixo | ✅ |
+| Hospedagem (EasyPanel/VPS) | **R$ 200/mês** | fixo | ✅ |
 
-### Tabela de cartão (recebimento em 30 dias)
-| Parcelas | Taxa | Parcelas | Taxa |
+> **A virada:** custo de um assinante = **NF (6% do bruto) + transcrição do mês** (variável, conforme uso). Cartão ≈ R$0 (juros do cliente). Infra/tenant ≈ 0.
+> No cartão parcelado a NF incide sobre os juros embutidos → absorvo 6% dos juros (**< 1 ponto**). PIX à vista não muda nada.
+
+---
+
+## 2. Planos (3 tiers × toggle Mensal/Anual)
+
+| Capacidade | **Start** | **Pro** ⭐ | **Scale** |
 |---|---|---|---|
-| 1x | 3,97% | 7x | 9,39% |
-| 2x | 5,19% | 8x | 10,19% |
-| 3x | 5,99% | 9x | 10,99% |
-| 4x | 6,79% | 10x | 11,79% |
-| 5x | 7,49% | 11x | 12,49% |
-| 6x | 8,29% | **12x** | **13,19%** |
+| Perfil | Low-ticket / começando | Chefe da casa | Negócio escalado |
+| Cursos | 1 | 3 | 10 |
+| **Transcrição/mês (renova)** | 25h (~75 aulas) | 50h (~150 aulas) | 90h (~270 aulas) |
+| Alunos | 500 | 1.000 | 2.500 |
+| Storage | 100 MB | 500 MB | 2 GB |
 
-> Todas + R$ 0,17. **A virada do modelo:** sem infra por tenant, o custo variável de um assinante em regime é só **NF (6%) + taxa de pagamento**. Tudo o mais é one-time (transcrição) ou fixo (hospedagem).
-
----
-
-## 2. Planos — preço, limites e custos
-
-| | Starter | Pro | Scale | Enterprise |
-|---|---|---|---|---|
-| **Preço/mês** | R$ 99 | R$ 299 | R$ 999 | sob proposta |
-| Cursos | 1 | 3 | 5 | ilimitado |
-| Transcrição/mês | 15h | 60h | 200h | sob medida |
-| Alunos ativos | 100 | 500 | 2.000 | ilimitado |
-| Storage | 100 MB | 500 MB | 2 GB | ilimitado |
-
-### Custo da cota cheia de transcrição (one-time, mês de carga)
-| Plano | Cálculo | Custo |
-|---|---|---|
-| Starter | 15h × 2,16 | **R$ 32,40** |
-| Pro | 60h × 2,16 | **R$ 129,60** |
-| Scale | 200h × 2,16 | **R$ 432,00** |
-
-### Custo variável mensal por assinante (NF + pagamento; infra ≈ 0)
-| Plano | NF 6% | PIX | Cartão 1x | **Variável PIX** | **Variável Cartão** |
-|---|---|---|---|---|---|
-| Starter | 5,94 | 0,47 | 4,10 | **6,41** | 10,04 |
-| Pro | 17,94 | 0,47 | 12,04 | **18,41** | 29,98 |
-| Scale | 59,94 | 0,47 | 39,83 | **60,41** | 99,77 |
-
----
-
-## 3. Margem por plano — cenários
-
-> **Mês 1:** transcreve 100% da cota (custo one-time). **Regime:** transcrição ≈ 0. Infra por tenant ≈ 0 (Supabase free).
-> *Estas margens são de contribuição — ainda não descontam o overhead fixo de hospedagem (ver §5).*
-
-### Via PIX (recomendado)
-| Plano | Preço | Margem mês 1 | Margem regime |
+| Preço | **Start** | **Pro** | **Scale** |
 |---|---|---|---|
-| Starter | R$ 99 | R$ 60,19 · **61%** | R$ 92,59 · **94%** |
-| Pro | R$ 299 | R$ 150,99 · **51%** | R$ 280,59 · **94%** |
-| Scale | R$ 999 | R$ 506,59 · **51%** | R$ 938,59 · **94%** |
+| **Mensal** | R$ 147/mês | R$ 297/mês | R$ 497/mês |
+| **Anual** (2 meses grátis) | R$ 1.470/ano | R$ 2.970/ano | R$ 4.970/ano |
+| Anual equivale a | R$ 122,50/mês | R$ 247,50/mês | R$ 414,17/mês |
+| Economia anual | R$ 294 | R$ 594 | R$ 994 |
 
-### Via Cartão 1x
-| Plano | Preço | Margem mês 1 | Margem regime |
+> Cota **renova todo mês** e **não acumula**. O infoprodutor grava sempre — a cota acompanha. Quem estoura num mês atípico usa o add-on; quem estoura sempre, sobe de tier.
+
+---
+
+## 3. Custo de transcrição (variável, por uso do mês)
+
+| Plano | Cota/mês | Custo se usar **100%** | Custo se usar **~50%** |
 |---|---|---|---|
-| Starter | R$ 99 | R$ 56,56 · **57%** | R$ 88,96 · **90%** |
-| Pro | R$ 299 | R$ 139,42 · **47%** | R$ 269,02 · **90%** |
-| Scale | R$ 999 | R$ 467,23 · **47%** | R$ 899,23 · **90%** |
+| Start | 25h | R$ 54,00 | R$ 27,00 |
+| Pro | 50h | R$ 108,00 | R$ 54,00 |
+| Scale | 90h | R$ 194,40 | R$ 97,20 |
 
-**Leitura:** com Supabase free, em regime cada assinante rende ~**94% via PIX** / ~90% via cartão. Mesmo no mês de carga total da transcrição, nenhum plano cai abaixo de ~47%.
+> Cada hora transcrita = R$ 2,16. Mês sem conteúdo novo = custo de transcrição R$ 0.
 
 ---
 
-## 4. Add-ons — margem unitária (via PIX)
+## 4. Margem por cenário de uso
 
-| Add-on | Preço | Custo (uso pleno) | **Margem** |
+Custo = NF 6% + transcrição do mês (+ PIX 0,47 no anual à vista). Margem cai quanto mais o cliente transcreve.
+
+### Cobrança Mensal (preço cheio/mês)
+| Plano | **Uso cheio (piso)** | Uso médio (~50%) | Mês leve (sem novo) |
 |---|---|---|---|
-| +1 curso | R$ 30 | NF 1,80 + PIX 0,47 | **~R$ 27,73 · 92%** |
-| +500 alunos | R$ 80 | NF 4,80 + PIX 0,47 | **~R$ 74,73 · 93%** |
-| +500 MB | R$ 25 | NF 1,50 + PIX 0,47 | **~R$ 23,03 · 92%** |
-| **+20h transcrição** | R$ 60 | **20h × 2,16 = 43,20** + NF 3,60 + PIX 0,47 | **~R$ 12,73 · 21%** ⚠️ |
+| Start | **57,3%** | 75,6% | 94,0% |
+| Pro | **57,6%** | 75,8% | 94,0% |
+| Scale | **54,9%** | 74,4% | 94,0% |
 
-> ⚠️ **+20h é o único item apertado:** ~21%. Custo direto R$ 43,20 (transcrição). **Piso pra 50%: R$ 86.** Subir pra R$ 79–89.
-
----
-
-## 5. Overhead fixo e ponto de equilíbrio
-
-Sem custo por tenant, o jogo vira **cobrir o overhead fixo** (hospedagem + Supabase Pro quando escalar). Depois disso, quase tudo é lucro.
-
-**Quantos assinantes pagam o overhead** (margem de contribuição PIX em regime):
-| Overhead fixo/mês | Starter (R$ 92,59) | Pro (R$ 280,59) | Scale (R$ 938,59) |
+### Cobrança Anual (/mês efetivo menor → margem menor)
+| Plano | **Uso cheio (piso)** | Uso médio (~50%) | Mês leve |
 |---|---|---|---|
-| R$ 150 (só Supabase Pro) | 2 assinantes | 1 | 1 |
-| R$ 300 (Supabase + VPS) | 4 | 2 | 1 |
-| R$ 500 | 6 | 2 | 1 |
+| Start | **49,9%** | 71,9% | 94,0% |
+| Pro | **50,4%** | 72,2% | 94,0% |
+| Scale | **47,1%** ⚠️ | 70,5% | 94,0% |
 
-> ⚠️ **Falta só o custo da hospedagem (EasyPanel)** pra fechar o overhead. Hoje no free de tudo, o break-even é praticamente o primeiro assinante.
+> ⚠️ **Único ponto abaixo de 50%:** Scale **anual** com uso de 100% da cota **todo mês** (270 aulas/mês × 12). Cenário irreal. No mensal o mesmo uso dá 55%; uso realista fica em 70–94%. Todo o resto do sistema respeita o piso de 50%.
 
 ---
 
-## 6. Projeção de desconto anual
+## 5. Add-ons — válvula de emergência (via PIX à vista)
 
-Anual = 12 × mensal. Transcrição segue one-time. **Custo operacional anual Pro** ≈ transcrição 1× (R$ 129,60) — infra ≈ 0. Arredondado: **~R$ 130**.
-
-### PRO — tabela R$ 3.588/ano · margem de contribuição por desconto × pagamento
-| Desconto | Preço anual | **Margem PIX** | **Margem Cartão 12x** |
+| Add-on | Preço | Custo | **Margem** |
 |---|---|---|---|
-| 0% | R$ 3.588 | R$ 3.242 · **90%** | R$ 2.769 · **77%** |
-| **17% (2 meses grátis)** | R$ 2.990 | R$ 2.680 · **90%** | R$ 2.286 · **76%** |
-| 25% | R$ 2.691 | R$ 2.399 · **89%** | R$ 2.044 · **76%** |
-| 30% | R$ 2.512 | R$ 2.231 · **89%** | R$ 1.900 · **76%** |
+| **+10h transcrição** | **R$ 49** | 21,60 + NF 2,94 + PIX 0,47 | **~R$ 24,00 · 49%** |
+| +1 curso | R$ 30 | NF 1,80 + PIX 0,47 | ~92% |
+| +500 alunos | R$ 80 | NF 4,80 + PIX 0,47 | ~93% |
+| +500 MB | R$ 25 | NF 1,50 + PIX 0,47 | ~92% |
 
-*(PIX R$ 0,47 · Cartão 12x 13,19% + 0,17 · NF 6% sobre preço recebido · custo op ~R$ 130.)*
-
-**Conclusão:** com Supabase free, o anual via PIX mantém ~**90% mesmo a 30% de desconto**. O único redutor relevante é o **cartão 12x** (cai pra ~76%). Recomendações:
-1. **Mensalidade → PIX recorrente** (padrão). Cartão 1x como alternativa (~90%).
-2. **Anual → PIX à vista** como oferta principal. Se oferecer parcelado: **repassar a taxa** (`passFeesToCustomer` no checkout) ou **limitar a 3–6x** (5,99%–8,29%) em vez de 12x (13,19%).
-3. Sem risco de prejuízo em nenhum cenário — é só otimização de quanto lucro capturar.
+> Add-on de horas é **socorro de mês atípico**, com preço camarada (49%) — não é fonte de lucro. Estouro recorrente = sinal de upgrade de tier. Empilhável (+10h × N).
 
 ---
 
-## 7. Pendência única
+## 6. Overhead e break-even
 
-1. ⚠️ **Custo mensal da hospedagem (EasyPanel/VPS)** — último número pra fechar o overhead e o break-even real.
-2. **Decisão comercial:** % do desconto anual + política de parcelamento.
-3. **Rever add-on +20h** (margem 21%).
-4. *Resolvido:* taxas ValidaPay reais · Supabase free (infra por tenant ≈ 0).
+**Overhead = R$ 200/mês (hospedagem)** · ~R$ 350/mês quando o Supabase virar Pro.
+
+Contribuição mensal (uso médio ~50%): Start mensal ~R$111 / anual ~R$88 · Pro mensal ~R$225 / anual ~R$179 · Scale mensal ~R$370 / anual ~R$292.
+
+| Overhead/mês | Cobre com |
+|---|---|
+| **R$ 200 (hoje)** | 2 Start · ou 1 Pro · ou 1 Scale |
+| R$ 350 (+ Supabase Pro) | 3 Start · ou 2 Pro · ou 1 Scale |
 
 ---
 
-### Fórmulas (pra planilha)
+## 7. Fórmulas
 
 ```
-custo_transcricao   = horas × 2,16
-custo_nf            = preco_recebido × 0,06
-fee_pix             = 0,47                                   (fixo)
-fee_cartao(n)       = preco_recebido × taxa(n)% + 0,17       (1x 3,97% … 12x 13,19%)
-custo_infra_tenant  = 0                                      (Supabase free)
+custo_transcricao = horas_usadas_no_mes × 2,16      (RENOVÁVEL, sem rollover)
+custo_nf          = preco_bruto × 0,06
+fee_pix           = 0,47                              (anual à vista)
+fee_cartao        = 0                                 (juros repassados)
+custo_infra       = 0
 
-margem_contrib_regime = preco − (nf + fee)
-margem_contrib_mes1   = preco − (transcricao_cheia + nf + fee)
-lucro_mensal          = Σ(margem_contrib) − overhead_fixo   (hospedagem + Supabase Pro)
+margem_mes  = preco − (nf + fee + horas_usadas × 2,16)
+lucro_liq   = Σ(contribuicao_mensal) − 200
 ```
+
+> ✅ **Modelo fechado** — sem rollover, cota mensal 25/50/90h, add-on +10h R$49. Nenhuma pendência (NF confirmada sobre o bruto).

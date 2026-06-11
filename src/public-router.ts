@@ -93,12 +93,31 @@ async function pricingPage(_req: IncomingMessage, res: ServerResponse): Promise<
   html(res, 200, pricingHtml(plans));
 }
 
+interface SignupPlan {
+  id: string; name: string;
+  monthlyAmount: number | null; monthlyPriceId: string | null;
+  annualAmount: number | null;  annualPriceId: string | null;
+}
+
 async function signupGet(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const q = getQuery(req);
-  const plans = await loadPublicPlans();
+  const plans = await loadPublicPlans(); // monthly headline + sync state
+  const { getActivePricesByPlanId } = await import("./lib/plan-prices.ts");
+  const annual = await getActivePricesByPlanId(plans.map((p) => p.id), "ANNUAL");
+  const signupPlans: SignupPlan[] = plans.map((p) => ({
+    id: p.id,
+    name: p.name,
+    monthlyAmount: p.monthly_price_brl,
+    monthlyPriceId: p.validapay_price_id,
+    annualAmount: annual.get(p.id)?.amountBrl ?? null,
+    annualPriceId: annual.get(p.id)?.validapayPriceId ?? null,
+  }));
+  const rec: "MONTHLY" | "ANNUAL" =
+    (q.get("rec") ?? "").toUpperCase() === "ANNUAL" ? "ANNUAL" : "MONTHLY";
   html(res, 200, signupHtml({
-    plans,
-    selected: q.get("plan") ?? plans[0]?.id ?? "",
+    plans: signupPlans,
+    selected: q.get("plan") ?? signupPlans[0]?.id ?? "",
+    recurrence: rec,
     error: q.get("error") ?? undefined,
     coupon: q.get("coupon") ?? undefined,
   }));
@@ -113,6 +132,10 @@ async function signupPost(req: IncomingMessage, res: ServerResponse): Promise<vo
   const slug = slugify(form.get("slug") || name);
   // Phase 11.3: optional coupon code at signup
   const couponCodeRaw = (form.get("coupon") ?? "").trim().toUpperCase();
+  // Recorrência escolhida no toggle: MONTHLY (cartão recorrente) ou ANNUAL
+  // (PIX à vista / cartão até 12×). Default seguro = MONTHLY.
+  const recurrence: "MONTHLY" | "ANNUAL" =
+    (form.get("recurrence") ?? "").trim().toUpperCase() === "ANNUAL" ? "ANNUAL" : "MONTHLY";
 
   if (!name || !email || !email.includes("@") || !slug || !planId) {
     return redirect(res, `/signup?error=missing_fields&plan=${encodeURIComponent(planId)}`);
@@ -125,10 +148,10 @@ async function signupPost(req: IncomingMessage, res: ServerResponse): Promise<vo
     "plans", `id=eq.${encodeURIComponent(planId)}&select=id,name`,
   );
   if (!plan) return redirect(res, `/signup?error=bad_plan`);
-  const { getActivePlanPrice } = await import("./lib/plan-prices.ts");
-  const monthly = await getActivePlanPrice(planId);
-  if (!monthly?.validapayPriceId) {
-    return redirect(res, `/signup?error=plan_not_synced&plan=${encodeURIComponent(planId)}`);
+  const { getActivePlanPriceByRecurrence } = await import("./lib/plan-prices.ts");
+  const price = await getActivePlanPriceByRecurrence(planId, recurrence);
+  if (!price?.validapayPriceId) {
+    return redirect(res, `/signup?error=plan_not_synced&plan=${encodeURIComponent(planId)}&rec=${recurrence}`);
   }
 
   const existing = await sb.selectOne<{ id: string }>(
@@ -150,7 +173,7 @@ async function signupPost(req: IncomingMessage, res: ServerResponse): Promise<vo
       const { getCouponByCodeLocal } = await import("./lib/coupons.ts");
       const result = await validateCoupon({
         code: couponCodeRaw,
-        amount: monthly.amountBrl,
+        amount: price.amountBrl,
         chargeType: "RECURRING",
         customerDocument: documentRaw,
       });
@@ -172,6 +195,7 @@ async function signupPost(req: IncomingMessage, res: ServerResponse): Promise<vo
     contact_email: email,
     contact_document: documentRaw,
     plan_id: planId,
+    plan_price_id: price.id, // records the chosen recurrence (monthly vs annual)
     status: "trial",
     trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     ...(validatedCouponCode ? { coupon_code_at_signup: validatedCouponCode } : {}),
@@ -183,9 +207,12 @@ async function signupPost(req: IncomingMessage, res: ServerResponse): Promise<vo
   let checkoutUrl: string;
   try {
     const session = await createCheckoutSession({
-      priceId: monthly.validapayPriceId,
+      priceId: price.validapayPriceId,
       customer: { email, documentNumber: documentRaw },
-      allowedPaymentMethods: ["pix", "creditcard"],
+      // Mensal = só cartão (assinatura recorrente). Anual = PIX à vista ou cartão
+      // até 12× — o parcelamento e o repasse de juros ao cliente são escolhidos na
+      // página hospedada do ValidaPay (checkout transparente fica pra uma fase futura).
+      allowedPaymentMethods: recurrence === "ANNUAL" ? ["pix", "creditcard"] : ["creditcard"],
       ...(validatedCouponCode ? { couponCode: validatedCouponCode } : {}),
     });
     await sb.update("tenants", `id=eq.${tenant.id}`, {
@@ -612,17 +639,18 @@ function pricingHtml(plans: PlanPublic[]): string {
   });
 }
 
-function signupHtml(args: { plans: Array<Pick<PlanPublic, "id" | "name" | "monthly_price_brl" | "validapay_price_id">>; selected: string; error?: string; coupon?: string }): string {
+function signupHtml(args: { plans: SignupPlan[]; selected: string; recurrence: "MONTHLY" | "ANNUAL"; error?: string; coupon?: string }): string {
   const errors: Record<string, string> = {
     missing_fields: "Preencha todos os campos.",
     bad_document: "CPF (11 dígitos) ou CNPJ (14 dígitos) inválido.",
     bad_plan: "Plano inválido.",
-    plan_not_synced: "Esse plano ainda não está disponível pra checkout. Tente outro.",
+    plan_not_synced: "Essa combinação de plano e recorrência ainda não está disponível pra checkout. Tente outra.",
     slug_taken: "Esse slug já existe. Escolha outro.",
     coupon_invalid: "Cupom inválido, expirado ou não aplicável a esse plano.",
   };
   const errMsg = args.error ? errors[args.error] ?? "Erro." : null;
-  const usable = args.plans.filter((p) => !!p.validapay_price_id);
+  // Usable = synced for at least one recurrence (monthly or annual).
+  const usable = args.plans.filter((p) => p.monthlyPriceId || p.annualPriceId);
 
   // Friendly empty state when no plan has been synced to ValidaPay yet.
   if (!usable.length) {
@@ -640,6 +668,16 @@ function signupHtml(args: { plans: Array<Pick<PlanPublic, "id" | "name" | "month
 </section>`,
     });
   }
+
+  // Price data island for the Mensal/Anual toggle. Names come from our own DB;
+  // escape "<" so a plan name can't break out of the <script> block.
+  const planJson = JSON.stringify(
+    usable.map((p) => ({
+      id: p.id, name: p.name,
+      m: p.monthlyAmount, mOk: !!p.monthlyPriceId,
+      a: p.annualAmount, aOk: !!p.annualPriceId,
+    })),
+  ).replace(/</g, "\\u003c");
 
   return pageShell({
     title: "Começar — Askine",
@@ -668,17 +706,82 @@ function signupHtml(args: { plans: Array<Pick<PlanPublic, "id" | "name" | "month
     <input name="document" required placeholder="000.000.000-00 ou 00.000.000/0001-00">
 
     <label>Plano</label>
-    <select name="plan" required>
-      ${usable.map((p) => `<option value="${esc(p.id)}"${p.id === args.selected ? " selected" : ""}>${esc(p.name)} — R$ ${Number(p.monthly_price_brl).toFixed(0)}/mês</option>`).join("")}
+    <select id="su-plan" name="plan" required>
+      ${usable.map((p) => `<option value="${esc(p.id)}"${p.id === args.selected ? " selected" : ""}>${esc(p.name)}</option>`).join("")}
     </select>
+
+    <label>Recorrência</label>
+    <div class="su-toggle">
+      <button type="button" id="su-m">Mensal</button>
+      <button type="button" id="su-a">Anual <span class="su-pill">2 meses grátis</span></button>
+    </div>
+    <input type="hidden" id="su-rec" name="recurrence" value="${args.recurrence}">
+    <div id="su-summary" class="su-summary"></div>
 
     <label>Cupom <span style="font-weight:400;color:#999;font-size:12px">(opcional)</span></label>
     <input name="coupon" placeholder="PROMO10" maxlength="40" style="text-transform:uppercase" value="${esc(args.coupon ?? "")}">
     <div class="help">Tem código promocional? Cole aqui — desconto é aplicado no checkout do ValidaPay.</div>
 
-    <button type="submit" class="pub-btn lg">Ir pro checkout →</button>
+    <button type="submit" id="su-submit" class="pub-btn lg">Ir pro checkout →</button>
     <div class="help" style="margin-top:14px;text-align:center">Você será redirecionado pro ValidaPay.</div>
   </form>
+
+  <style>
+    .su-toggle{display:flex;gap:8px;background:#f1f3f7;border-radius:12px;padding:5px}
+    .su-toggle button{flex:1;border:0;background:transparent;color:#555;font-weight:600;font-size:14px;
+      padding:10px;border-radius:9px;cursor:pointer;transition:.15s}
+    .su-toggle button.active{background:#fff;color:#111;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+    .su-pill{font-size:11px;font-weight:700;color:#1a8a52;background:rgba(26,138,82,.12);
+      padding:2px 7px;border-radius:999px;margin-left:4px}
+    .su-summary{margin:12px 0 4px;padding:14px 16px;border:1px solid var(--border, #e5e7eb);
+      border-radius:12px;font-size:16px;font-weight:700;color:#111;line-height:1.5}
+    .su-summary .su-eq{font-weight:500;color:#666;font-size:14px}
+    .su-summary .su-note{display:inline-block;font-weight:500;color:#666;font-size:13px;margin-top:2px}
+    .su-summary .su-warn{display:inline-block;font-weight:600;color:#b45309;font-size:13px;margin-top:4px}
+    #su-submit[disabled]{opacity:.5;cursor:not-allowed}
+  </style>
+  <script>
+  (function(){
+    var PLANS = ${planJson};
+    var byId = {}; PLANS.forEach(function(p){ byId[p.id] = p; });
+    var rec = ${JSON.stringify(args.recurrence)};
+    var sel = document.getElementById('su-plan');
+    var hid = document.getElementById('su-rec');
+    var btnM = document.getElementById('su-m');
+    var btnA = document.getElementById('su-a');
+    var summary = document.getElementById('su-summary');
+    var submit = document.getElementById('su-submit');
+    function brl(v){
+      return 'R$ ' + Number(v).toLocaleString('pt-BR', {
+        minimumFractionDigits: (v % 1 === 0 ? 0 : 2), maximumFractionDigits: 2 });
+    }
+    function render(){
+      var p = byId[sel.value]; if(!p){ return; }
+      btnM.classList.toggle('active', rec === 'MONTHLY');
+      btnA.classList.toggle('active', rec === 'ANNUAL');
+      hid.value = rec;
+      var ok, line;
+      if(rec === 'ANNUAL'){
+        ok = p.aOk;
+        line = (p.a != null)
+          ? brl(p.a) + '/ano <span class="su-eq">(' + brl(p.a/12) + '/mês)</span>'
+            + '<br><span class="su-note">PIX à vista ou cartão até 12× — juros do cartão por conta do cliente</span>'
+          : '<span class="su-note">Anual indisponível neste plano</span>';
+      } else {
+        ok = p.mOk;
+        line = (p.m != null ? brl(p.m) + '/mês' : '—')
+          + '<br><span class="su-note">Cobrado mensalmente no cartão</span>';
+      }
+      if(!ok){ line += '<br><span class="su-warn">⚠ Ainda não disponível pra checkout nesta recorrência.</span>'; }
+      summary.innerHTML = line;
+      submit.disabled = !ok;
+    }
+    btnM.addEventListener('click', function(e){ e.preventDefault(); rec = 'MONTHLY'; render(); });
+    btnA.addEventListener('click', function(e){ e.preventDefault(); rec = 'ANNUAL'; render(); });
+    sel.addEventListener('change', render);
+    render();
+  })();
+  </script>
 </section>`,
   });
 }
@@ -992,37 +1095,37 @@ function homeHtml(): string {
     </div>
     <div class="pub-plans" style="max-width:920px;margin:48px auto 0">
       <div class="pub-plan">
-        <div class="pub-plan-name">Starter</div>
-        <div class="pub-plan-price">R$ 99<span class="per">/mês</span></div>
+        <div class="pub-plan-name">Start</div>
+        <div class="pub-plan-price">R$ 147<span class="per">/mês</span></div>
         <div class="pub-plan-desc">Um curso, validação rápida.</div>
         <a class="pub-plan-cta" href="/signup?plan=starter">Começar</a>
         <ul class="pub-plan-features">
           <li>1 curso</li>
-          <li>15h Whisper/mês</li>
-          <li>100 alunos ativos</li>
+          <li>25h Whisper/mês</li>
+          <li>500 alunos ativos</li>
         </ul>
       </div>
       <div class="pub-plan featured">
         <div class="pub-plan-name">Pro</div>
-        <div class="pub-plan-price">R$ 299<span class="per">/mês</span></div>
+        <div class="pub-plan-price">R$ 297<span class="per">/mês</span></div>
         <div class="pub-plan-desc">Catálogo crescendo, audiência fiel.</div>
         <a class="pub-plan-cta" href="/signup?plan=pro">Começar</a>
         <ul class="pub-plan-features">
           <li>3 cursos</li>
-          <li>60h Whisper/mês</li>
-          <li>500 alunos ativos</li>
+          <li>50h Whisper/mês</li>
+          <li>1.000 alunos ativos</li>
           <li>Insights por curso</li>
         </ul>
       </div>
       <div class="pub-plan">
         <div class="pub-plan-name">Scale</div>
-        <div class="pub-plan-price">R$ 999<span class="per">/mês</span></div>
+        <div class="pub-plan-price">R$ 497<span class="per">/mês</span></div>
         <div class="pub-plan-desc">Múltiplos cursos, lançamento grande.</div>
         <a class="pub-plan-cta" href="/signup?plan=scale">Começar</a>
         <ul class="pub-plan-features">
-          <li>5 cursos</li>
-          <li>200h Whisper/mês</li>
-          <li>2.000 alunos ativos</li>
+          <li>10 cursos</li>
+          <li>90h Whisper/mês</li>
+          <li>2.500 alunos ativos</li>
           <li>Suporte prioritário</li>
         </ul>
       </div>

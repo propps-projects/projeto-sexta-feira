@@ -72,14 +72,18 @@ interface TokenCache {
 }
 let cache: TokenCache | null = null;
 
-// Phase 11: explicit scope list. We request what we actually call so that
-// ValidaPay's permission tracking matches our integration profile.
-const TOKEN_SCOPE = [
-  "products/read", "products/write",
-  "checkouts/write",
-  "subscriptions/read", "subscriptions/write",
-  "coupons/read", "coupons/write",
-].join(" ");
+// ValidaPay's /auth/token is all-or-nothing: if ANY requested scope isn't
+// granted to the client, it 403s the whole request ("Unauthorized scope") and
+// every API call fails — sync, checkout, the lot. Our sandbox client is only
+// authorized for the four below; requesting products/read or coupons/* here was
+// 403'ing all of ValidaPay. Keep this to what the client actually has.
+//
+// If ValidaPay grants more scopes to the client, add them here (or override via
+// VALIDA_SCOPES): product read/list (Phase 11.2) needs products/read; coupon
+// CRUD in super-admin (Phase 11.3) needs coupons/read+write. Public coupon
+// validation at signup uses no Bearer, so it works regardless.
+const TOKEN_SCOPE = (process.env.VALIDA_SCOPES ??
+  "products/write checkouts/write subscriptions/read subscriptions/write").trim();
 
 async function fetchToken(scope: string): Promise<TokenCache> {
   const { id, secret } = clientCreds();

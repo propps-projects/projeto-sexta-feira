@@ -97,25 +97,44 @@ export async function deletePlanPrice(planId: string, recurrence: Recurrence): P
 }
 
 /**
- * Lookup the currently ACTIVE price for a plan. Returns null if no
- * price is active. Used by /pricing, /signup, billing MRR calc and
- * everywhere that asks "what does this plan cost right now".
+ * Lookup the currently ACTIVE MONTHLY price for a plan — the "headline"
+ * price shown on /pricing, used for MRR calc, plan-change checkout, and the
+ * monthly signup flow. Returns null if no MONTHLY price is active.
+ *
+ * Since migration 020 a plan can have multiple active prices (one per
+ * recurrence), so this is pinned to MONTHLY to stay deterministic. For the
+ * annual signup path use getActivePlanPriceByRecurrence(planId, "ANNUAL").
  */
 export async function getActivePlanPrice(planId: string): Promise<PlanPrice | null> {
+  return getActivePlanPriceByRecurrence(planId, "MONTHLY");
+}
+
+/** Active price for a specific recurrence (one active per (plan, recurrence)). */
+export async function getActivePlanPriceByRecurrence(
+  planId: string,
+  recurrence: Recurrence,
+): Promise<PlanPrice | null> {
   const r = await sb.selectOne<PlanPriceRow>(
     "plan_prices",
-    `plan_id=eq.${encodeURIComponent(planId)}&is_active=is.true&select=*`,
+    `plan_id=eq.${encodeURIComponent(planId)}&recurrence=eq.${recurrence}&is_active=is.true&select=*`,
   );
   return r ? map(r) : null;
 }
 
-/** Batch version of getActivePlanPrice to avoid N+1 in /pricing. */
-export async function getActivePricesByPlanId(planIds: string[]): Promise<Map<string, PlanPrice>> {
+/**
+ * Batch version to avoid N+1. Defaults to the MONTHLY headline price so
+ * existing callers (/pricing, plan gauge, MRR) keep one row per plan. Pass a
+ * recurrence to fetch the active annual prices for the signup toggle.
+ */
+export async function getActivePricesByPlanId(
+  planIds: string[],
+  recurrence: Recurrence = "MONTHLY",
+): Promise<Map<string, PlanPrice>> {
   const out = new Map<string, PlanPrice>();
   if (planIds.length === 0) return out;
   const rows = await sb.select<PlanPriceRow>(
     "plan_prices",
-    `is_active=is.true&plan_id=in.(${planIds.map((id) => encodeURIComponent(id)).join(",")})&select=*`,
+    `is_active=is.true&recurrence=eq.${recurrence}&plan_id=in.(${planIds.map((id) => encodeURIComponent(id)).join(",")})&select=*`,
   );
   for (const r of rows) out.set(r.plan_id, map(r));
   return out;
