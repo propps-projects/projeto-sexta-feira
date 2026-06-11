@@ -195,62 +195,74 @@ async function handleMcpRequest(args: {
     let transport = sessionId ? transports.get(sessionId) : undefined;
 
     if (!transport) {
-      // Phase 10.1 — session resilience. The MCP HTTP Streamable spec
-      // distinguishes between TWO miss-cases and the cure differs:
-      //
-      //   A) No Mcp-Session-Id sent + not an initialize call → 400.
-      //      The client never established a session and we can't help.
-      //
-      //   B) Mcp-Session-Id sent but unknown to us + not initialize → 404.
-      //      The session existed at some point (server restart wiped our
-      //      in-memory `transports` map) but doesn't anymore. Per spec,
-      //      the client treats 404 as "session expired" and AUTOMATICALLY
-      //      replays initialize → caches the new session-id → retries the
-      //      original request. End user never sees a disconnect.
-      //
-      // This is the difference between "user reconnects the connector
-      // after every deploy" and "deploys are invisible to users".
-      if (!isInitializeRequest(body)) {
-        const status = sessionId ? 404 : 400;
-        const message = sessionId
-          ? "Session expired — please reinitialize"
-          : "No session — first request must be initialize";
-        res.writeHead(status, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({
-          jsonrpc: "2.0",
-          error: { code: -32000, message },
-          id: null,
-        }));
+      if (isInitializeRequest(body)) {
+        // Normal initialize flow: stateful transport with a fresh session-id.
+        // Subsequent POST/GET/DELETE on this session can be served from the
+        // cache (enables SSE streaming, server-initiated notifications).
+        transport = new StreamableHTTPServerTransport({
+          sessionIdGenerator: () => randomUUID(),
+          onsessioninitialized: (id) => { transports.set(id, transport!); },
+        });
+        transport.onclose = () => {
+          if (transport!.sessionId) transports.delete(transport!.sessionId);
+        };
+        const server = buildServer(adapterMode, tenant, {
+          studentId,
+          accessibleCourseIds,
+          mcpUser: mcpUser ?? null,
+          accessibleCourses: accessibleCourses ?? null,
+        });
+        await server.connect(transport);
+      } else {
+        // Phase 10.2 — stateless revive.
+        //
+        // Client sent a Mcp-Session-Id we don't recognise (server restart
+        // wiped our in-memory `transports` Map) but they're not asking to
+        // initialize. Phase 10.1 returned 404 here expecting the client
+        // SDK to auto-reinitialize; in practice Claude.ai's SDK surfaces
+        // the 404 as a hard error ("MCP session has been terminated or no
+        // longer exists on the server") and the user has to refresh / reconnect.
+        //
+        // Fix: serve this request in STATELESS mode using a one-shot transport
+        // that doesn't validate the incoming session-id. The bearer was already
+        // OAuth-checked upstream, so the request is fully authorized. We build a
+        // server from the bearer's mcpUser/tenant context, connect a fresh
+        // stateless transport, handle the request, and let GC drop it.
+        //
+        // Trade-off: stateless mode means no SSE / server-initiated notifications
+        // FOR THIS REQUEST. Our tools are all request/response so we don't lose
+        // anything. The next initialize call from the client will still create a
+        // proper stateful session (cached path above).
+        const oneShot = new StreamableHTTPServerTransport({
+          sessionIdGenerator: undefined, // stateless: skip session-id validation
+        });
+        const server = buildServer(adapterMode, tenant, {
+          studentId,
+          accessibleCourseIds,
+          mcpUser: mcpUser ?? null,
+          accessibleCourses: accessibleCourses ?? null,
+        });
+        await server.connect(oneShot);
+        await oneShot.handleRequest(req, res, body);
         return;
       }
-      transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: () => randomUUID(),
-        onsessioninitialized: (id) => { transports.set(id, transport!); },
-      });
-      transport.onclose = () => {
-        if (transport!.sessionId) transports.delete(transport!.sessionId);
-      };
-      const server = buildServer(adapterMode, tenant, {
-        studentId,
-        accessibleCourseIds,
-        mcpUser: mcpUser ?? null,
-        accessibleCourses: accessibleCourses ?? null,
-      });
-      await server.connect(transport);
     }
     await transport.handleRequest(req, res, body);
     return;
   }
 
   if (req.method === "GET" || req.method === "DELETE") {
-    // Same spec rule applied to GET/DELETE: 400 if no session-id was sent
-    // (client is malformed); 404 if a stale session-id was sent (server
-    // restarted) so the client knows to reinitialize rather than error out.
+    // SSE streams (GET) and explicit close (DELETE) require a live session
+    // by spec — we can't fake those with a stateless transport because the
+    // server might want to push notifications, which has nowhere to land.
     if (!sessionId) {
       res.writeHead(400).end("missing Mcp-Session-Id");
       return;
     }
     if (!transports.has(sessionId)) {
+      // Old session-id no longer in our Map. Returning 404 here is fine:
+      // hosts treat a missing SSE stream as "no notifications available"
+      // and don't surface it as a user-facing error like they do for POST.
       res.writeHead(404).end("session expired");
       return;
     }
