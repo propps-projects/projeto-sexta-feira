@@ -58,15 +58,17 @@ function Info({ light }: { light?: boolean }) {
 export default function Pricing() {
   const [annual, setAnnual] = useState(false);
   const [dyn, setDyn] = useState<Record<string, DynPrice>>({});
+  const [annualBadge, setAnnualBadge] = useState('17% OFF');
 
   useEffect(() => {
     const url = (import.meta.env.PUBLIC_PRICING_URL as string | undefined) ?? '/pricing.json';
     fetch(url)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((data: { plans: Array<{ id: string } & DynPrice> }) => {
+      .then((data: { plans: Array<{ id: string } & DynPrice>; annualBadge?: string }) => {
         const m: Record<string, DynPrice> = {};
         for (const pl of data.plans) m[pl.id] = pl;
         setDyn(m);
+        if (typeof data.annualBadge === 'string') setAnnualBadge(data.annualBadge);
       })
       .catch(() => {/* keep static fallback from data/pricing.ts */});
   }, []);
@@ -89,8 +91,8 @@ export default function Pricing() {
               display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 600, color: annual === val ? 'var(--ink)' : 'var(--ink-soft)' }}>
             {annual === val && <motion.span layoutId="toggle-pill" style={{ position: 'absolute', inset: 0, background: '#fff', borderRadius: 999, boxShadow: 'var(--shadow-soft)', zIndex: 0 }} />}
             <span style={{ position: 'relative', zIndex: 1 }}>{label}</span>
-            {label === 'Anual' && (
-              <span style={{ position: 'relative', zIndex: 1, fontSize: 12, fontWeight: 700, color: 'var(--green-ink)', background: 'var(--green-bg)', padding: '2px 8px', borderRadius: 999 }}>17% OFF</span>
+            {label === 'Anual' && annualBadge && (
+              <span style={{ position: 'relative', zIndex: 1, fontSize: 12, fontWeight: 700, color: 'var(--green-ink)', background: 'var(--green-bg)', padding: '2px 8px', borderRadius: 999 }}>{annualBadge}</span>
             )}
           </button>
         ))}

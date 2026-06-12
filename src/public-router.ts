@@ -152,7 +152,9 @@ async function pricingJsonPage(_req: IncomingMessage, res: ServerResponse): Prom
       capacity: { mensal, anual },
     };
   });
-  json(res, 200, { plans: out });
+  const { getSetting } = await import("./lib/settings.ts");
+  const annualBadge = (await getSetting("lp_annual_badge")) ?? "17% OFF";
+  json(res, 200, { plans: out, annualBadge });
 }
 
 interface SignupPlan {

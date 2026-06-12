@@ -209,6 +209,8 @@ async function plansList(req: IncomingMessage, res: ServerResponse): Promise<voi
   for (const p of plans) {
     pricesByPlan.set(p.id, await listPlanPrices(p.id));
   }
+  const { getSetting } = await import("./lib/settings.ts");
+  const lpAnnualBadge = (await getSetting("lp_annual_badge")) ?? "17% OFF";
   const q = getQuery(req);
   html(res, 200, layout({
     title: "Plans",
@@ -217,10 +219,22 @@ async function plansList(req: IncomingMessage, res: ServerResponse): Promise<voi
     body: plansHtml({
       plans,
       pricesByPlan,
+      lpAnnualBadge,
       message: q.get("msg") ?? undefined,
       activeTabId: q.get("tab") ?? plans[0]?.id ?? "",
     }),
   }));
+}
+
+/** Saves landing-page settings (today: the annual-toggle badge text). */
+async function lpSettingsUpdate(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const sess = await requireSuperAdmin(req, res);
+  if (!sess) return;
+  const form = await readForm(req);
+  const badge = (form.get("lp_annual_badge") ?? "").trim().slice(0, 40);
+  const { setSetting } = await import("./lib/settings.ts");
+  await setSetting("lp_annual_badge", badge);
+  redirect(res, `${publicUrl()}/super-admin/plans?msg=badge_saved`);
 }
 
 interface PlanRowFull {
@@ -1030,6 +1044,15 @@ function periodsTableHtml(args: {
   quem já assinou um período antigo continua nele (grandfathered).
   ${activePrice ? `Hoje ativo: <strong>${periods.find((p) => p.key === activePrice.recurrence)?.label ?? activePrice.recurrence} (${fmt(activePrice.amountBrl)})</strong>.` : `Nenhum período ativo — esse ${ownerLabel} não pode ser comprado.`}
 </p>
+${args.kind === "plans" ? `
+<div class="ax-msg" style="background:var(--ax-surface-2);border-left:3px solid var(--ax-accent,#6d8bff);margin:0 0 14px;padding:10px 14px;font-size:12.5px;line-height:1.55">
+  <strong>Capacidade por recorrência (oferta):</strong> a capacidade base do plano sai dos campos lá em cima
+  (<em>"Salvar capacidades"</em>) e vale pro <strong>Mensal</strong>. Na linha <strong>Anual</strong> você pode
+  <strong>sobrescrever</strong> cada limite só pra essa recorrência — ex.: oferta de <em>transcrição em dobro no anual</em>.
+  <br>• <strong>Deixe vazio</strong> = herda a base do plano (o número entre parênteses no campo é o valor herdado).
+  <br>• <strong>Preencha</strong> = vale só no anual; o assinante anual recebe essa cota e a landing mostra esse valor no toggle "Anual".
+  <br>Storage é em <strong>bytes</strong> (100 MB = 104857600 · 500 MB = 524288000 · 1 GB = 1073741824 · 2 GB = 2147483648).
+</div>` : ""}
 <table class="ax-table" style="font-size:13px">
   <tr><th style="width:140px">Período</th><th style="width:240px">Preço total</th><th>Status</th><th style="width:280px;text-align:right">Ações</th></tr>
   ${periods.map((per) => {
@@ -1167,11 +1190,13 @@ function planTabHtml(p: PlanRowFull, args: { isActive: boolean; prices: Array<im
 function plansHtml(args: {
   plans: PlanRowFull[];
   pricesByPlan: Map<string, Array<import("./lib/plan-prices.ts").PlanPrice>>;
+  lpAnnualBadge: string;
   message?: string;
   activeTabId: string;
 }): string {
   const msgs: Record<string, [string, "success" | "error" | "warn"]> = {
     plan_saved:        ["Capacidades atualizadas.", "success"],
+    badge_saved:       ["Selo do Anual atualizado na landing.", "success"],
     sync_ok:           ["Sincronizado com ValidaPay.", "success"],
     sync_failed:       ["Falha ao sincronizar com ValidaPay. Veja logs.", "error"],
     sync_needs_price:  ["Defina o preço primeiro.", "error"],
@@ -1210,6 +1235,17 @@ function plansHtml(args: {
 ${msgText ? `<div class="ax-msg ${msgKind}">${esc(msgText)}</div>` : ""}
 <p class="help" style="margin-bottom:18px">Edite preços e limites. Mudança fica ativa imediatamente. <strong>"Sync ValidaPay"</strong> cria product+price no ValidaPay e salva os IDs. Cálculo de margem embaixo de cada plano.</p>
 
+<div class="ax-card" style="margin-bottom:20px;padding:16px 18px">
+  <form method="POST" action="/super-admin/lp-settings" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+    <div>
+      <label style="display:block;font-size:12px;color:var(--ax-text-mute);margin-bottom:4px">Selo do toggle Anual na landing</label>
+      <input name="lp_annual_badge" value="${esc(args.lpAnnualBadge)}" maxlength="40" placeholder="17% OFF" style="width:240px">
+    </div>
+    <button type="submit" class="ax-btn sm">Salvar selo</button>
+    <span class="help" style="font-size:11.5px;color:var(--ax-text-mute)">Aparece ao lado de "Anual" nos cards de preço (ex.: "17% OFF", "2 meses grátis"). Vazio = sem selo.</span>
+  </form>
+</div>
+
 <div class="plan-tabs">${tabs}</div>
 
 ${args.plans.map((p) => planTabHtml(p, { isActive: p.id === activeId, prices: args.pricesByPlan.get(p.id) ?? [] })).join("")}`;
@@ -1224,6 +1260,7 @@ export type SuperAdminRouteMatch =
   | { type: "tenant-plan"; slug: string }
   | { type: "tenant-status"; slug: string }
   | { type: "plans-list" }
+  | { type: "lp-settings" }
   | { type: "plan-update"; id: string }
   | { type: "plan-sync"; id: string }
   | { type: "addons-list" }
@@ -1253,6 +1290,7 @@ export function matchSuperAdminRoute(suffix: string, method: string): SuperAdmin
   if (method === "GET"  && path === "/verify")   return { type: "verify" };
   if (method === "GET"  && path === "/tenants")  return { type: "tenants-list" };
   if (method === "GET"  && path === "/plans")    return { type: "plans-list" };
+  if (method === "POST" && path === "/lp-settings") return { type: "lp-settings" };
   if (method === "GET"  && path === "/addons")   return { type: "addons-list" };
   if (method === "POST" && path === "/addons")   return { type: "addon-create" };
   if (method === "GET"  && path === "/coupons")  return { type: "coupons-list" };
@@ -1311,6 +1349,7 @@ export async function handleSuperAdminRoute(
     case "tenant-plan":    return tenantPlanPost(match.slug, req, res);
     case "tenant-status":  return tenantStatusPost(match.slug, req, res);
     case "plans-list":     return plansList(req, res);
+    case "lp-settings":    return lpSettingsUpdate(req, res);
     case "plan-update":    return planUpdate(match.id, req, res);
     case "plan-sync":      return planSyncToValidapay(match.id, req, res);
     case "addons-list":    return addonsList(req, res);
