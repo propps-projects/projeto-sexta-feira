@@ -792,9 +792,9 @@ function signupHtml(args: { plans: SignupPlan[]; selected: string; recurrence: "
     body: `
 <section class="pub-section">
   <div class="pub-container narrow" style="text-align:center">
-    <span class="pub-eyebrow">Começar</span>
-    <h1 class="pub-display">Cadastra teu produto em 2 minutos.</h1>
-    <p class="pub-lead pub-lead-center">Trial de 7 dias em qualquer plano. Cobrança via PIX ou cartão começa só depois.</p>
+    <h1 class="pub-display">Integre seu curso em 5 minutos.</h1>
+    <p class="pub-lead pub-lead-center">Experimente qualquer plano por 7 dias.</p>
+    <p class="pub-lead pub-lead-center" style="font-size:14px;margin-top:8px;opacity:0.85">Cobrança via pix ou cartão somente no final do período de teste.</p>
   </div>
 
   <form method="POST" action="/signup" class="pub-form" style="margin-top:40px">
