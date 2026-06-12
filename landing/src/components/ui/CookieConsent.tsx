@@ -81,26 +81,31 @@ export default function CookieConsent() {
     <div role="dialog" aria-label="Consentimento de cookies"
       style={{
         position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 1000,
-        background: 'var(--dark, #0d0d0f)', color: '#fff',
+        background: '#ffffff', color: '#262626',
         padding: '18px clamp(16px,4vw,40px)',
         display: 'flex', alignItems: 'center', gap: 'clamp(16px,4vw,40px)',
         flexWrap: 'wrap', justifyContent: 'center',
-        boxShadow: '0 -8px 30px rgba(0,0,0,0.25)',
+        borderTop: '1px solid rgba(0,0,0,0.08)',
+        boxShadow: '0 -6px 28px rgba(0,0,0,0.10)',
       }}>
-      <p style={{ flex: '1 1 380px', margin: 0, fontSize: 14.5, lineHeight: 1.5, color: 'rgba(255,255,255,0.82)' }}>
+      <p style={{ flex: '1 1 380px', margin: 0, fontSize: 14.5, lineHeight: 1.5, color: '#3a3a38' }}>
         Usamos cookies de analytics para entender como você navega no site e melhorar sua experiência.
         Nenhum dado é coletado sem o seu consentimento explícito. Leia nossa{' '}
         <a href="/privacidade" style={{ color: '#ff6a32', fontWeight: 600 }}>Política de Privacidade</a>.
       </p>
       <div style={{ display: 'flex', gap: 12, flex: '0 0 auto' }}>
         <button onClick={reject} aria-label="Recusar cookies"
-          style={{ border: '1px solid rgba(255,255,255,0.3)', background: 'transparent', color: '#fff',
-            fontWeight: 600, fontSize: 15, padding: '12px 26px', borderRadius: 999, cursor: 'pointer' }}>
+          style={{
+            border: '1px solid rgba(0,0,0,0.18)', background: 'transparent', color: '#444',
+            fontWeight: 600, fontSize: 15, padding: '12px 26px', borderRadius: 999, cursor: 'pointer'
+          }}>
           Recusar
         </button>
         <button onClick={accept} aria-label="Aceitar cookies"
-          style={{ border: 0, background: '#ff5a1f', color: '#fff',
-            fontWeight: 700, fontSize: 15, padding: '12px 26px', borderRadius: 999, cursor: 'pointer' }}>
+          style={{
+            border: 0, background: '#ff6a32', color: '#fff',
+            fontWeight: 700, fontSize: 15, padding: '12px 26px', borderRadius: 999, cursor: 'pointer'
+          }}>
           Aceitar cookies
         </button>
       </div>
