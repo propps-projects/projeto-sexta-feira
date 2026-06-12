@@ -38,6 +38,12 @@ export interface PlanPrice {
   // Operator-verified 12x card installment (interest baked in), shown on the
   // public landing. Only meaningful on ANNUAL rows. See migration 021.
   installment12xBrl: number | null;
+  // Per-recurrence capacity overrides (migration 022). null = inherit the
+  // plan's base capacity; a value replaces it for tenants on this recurrence.
+  maxCoursesOvr: number | null;
+  transcribeHoursMonthOvr: number | null;
+  activeStudentsMonthOvr: number | null;
+  kbSizeBytesOvr: number | null;
 }
 
 interface PlanPriceRow {
@@ -49,6 +55,10 @@ interface PlanPriceRow {
   validapay_product_id: string | null;
   validapay_price_id: string | null;
   installment_12x_brl: string | number | null;
+  max_courses_ovr: number | null;
+  transcribe_hours_month_ovr: string | number | null;
+  active_students_month_ovr: number | null;
+  kb_size_bytes_ovr: string | number | null;
 }
 
 function map(r: PlanPriceRow): PlanPrice {
@@ -61,6 +71,10 @@ function map(r: PlanPriceRow): PlanPrice {
     validapayProductId: r.validapay_product_id,
     validapayPriceId: r.validapay_price_id,
     installment12xBrl: r.installment_12x_brl == null ? null : Number(r.installment_12x_brl),
+    maxCoursesOvr: r.max_courses_ovr,
+    transcribeHoursMonthOvr: r.transcribe_hours_month_ovr == null ? null : Number(r.transcribe_hours_month_ovr),
+    activeStudentsMonthOvr: r.active_students_month_ovr,
+    kbSizeBytesOvr: r.kb_size_bytes_ovr == null ? null : Number(r.kb_size_bytes_ovr),
   };
 }
 
@@ -82,6 +96,12 @@ export async function upsertPlanPrice(args: {
   recurrence: Recurrence;
   amountBrl: number;
   installment12xBrl?: number | null;
+  // Capacity overrides — undefined leaves the column untouched on conflict;
+  // null clears it (inherit base); a number sets it.
+  maxCoursesOvr?: number | null;
+  transcribeHoursMonthOvr?: number | null;
+  activeStudentsMonthOvr?: number | null;
+  kbSizeBytesOvr?: number | null;
 }): Promise<PlanPrice> {
   // PostgREST upsert needs on_conflict + Prefer resolution
   const payload: Record<string, unknown> = {
@@ -91,6 +111,10 @@ export async function upsertPlanPrice(args: {
     updated_at: new Date().toISOString(),
   };
   if (args.installment12xBrl !== undefined) payload.installment_12x_brl = args.installment12xBrl;
+  if (args.maxCoursesOvr !== undefined) payload.max_courses_ovr = args.maxCoursesOvr;
+  if (args.transcribeHoursMonthOvr !== undefined) payload.transcribe_hours_month_ovr = args.transcribeHoursMonthOvr;
+  if (args.activeStudentsMonthOvr !== undefined) payload.active_students_month_ovr = args.activeStudentsMonthOvr;
+  if (args.kbSizeBytesOvr !== undefined) payload.kb_size_bytes_ovr = args.kbSizeBytesOvr;
   const inserted = await sb.insert<PlanPriceRow>(
     "plan_prices",
     payload,

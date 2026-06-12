@@ -176,15 +176,46 @@ async function effectiveLimits(tenantId: string, plan: Plan, tenantStatus: strin
   if (tenantStatus === "trial") {
     return TRIAL_LIMITS;
   }
+  // Per-recurrence capacity overrides (migration 022): the tenant's plan_price
+  // may override the plan base for its recurrence (e.g. double students on the
+  // annual plan). null override = inherit the plan base.
+  let base = {
+    maxCourses: plan.maxCourses,
+    transcribeHoursMonth: plan.transcribeHoursMonth,
+    activeStudentsMonth: plan.activeStudentsMonth,
+    kbSizeBytes: plan.kbSizeBytes,
+  };
+  const t = await sb.selectOne<{ plan_price_id: string | null }>(
+    "tenants", `id=eq.${tenantId}&select=plan_price_id`,
+  );
+  if (t?.plan_price_id) {
+    const ovr = await sb.selectOne<{
+      max_courses_ovr: number | null;
+      transcribe_hours_month_ovr: string | number | null;
+      active_students_month_ovr: number | null;
+      kb_size_bytes_ovr: string | number | null;
+    }>(
+      "plan_prices",
+      `id=eq.${encodeURIComponent(t.plan_price_id)}&select=max_courses_ovr,transcribe_hours_month_ovr,active_students_month_ovr,kb_size_bytes_ovr`,
+    );
+    if (ovr) {
+      base = {
+        maxCourses:           ovr.max_courses_ovr ?? plan.maxCourses,
+        transcribeHoursMonth: ovr.transcribe_hours_month_ovr != null ? Number(ovr.transcribe_hours_month_ovr) : plan.transcribeHoursMonth,
+        activeStudentsMonth:  ovr.active_students_month_ovr ?? plan.activeStudentsMonth,
+        kbSizeBytes:          ovr.kb_size_bytes_ovr != null ? Number(ovr.kb_size_bytes_ovr) : plan.kbSizeBytes,
+      };
+    }
+  }
   const { sumActiveAddons } = await import("./addons.ts");
   const addons = await sumActiveAddons(tenantId);
-  const add = (base: number | null, extra: number): number | null =>
-    base == null ? null : base + extra;
+  const add = (b: number | null, extra: number): number | null =>
+    b == null ? null : b + extra;
   return {
-    maxCourses:           add(plan.maxCourses,           addons.extraCourses),
-    transcribeHoursMonth: add(plan.transcribeHoursMonth, addons.extraHours),
-    activeStudentsMonth:  add(plan.activeStudentsMonth,  addons.extraStudents),
-    kbSizeBytes:          add(plan.kbSizeBytes,          addons.extraKbBytes),
+    maxCourses:           add(base.maxCourses,           addons.extraCourses),
+    transcribeHoursMonth: add(base.transcribeHoursMonth, addons.extraHours),
+    activeStudentsMonth:  add(base.activeStudentsMonth,  addons.extraStudents),
+    kbSizeBytes:          add(base.kbSizeBytes,          addons.extraKbBytes),
   };
 }
 

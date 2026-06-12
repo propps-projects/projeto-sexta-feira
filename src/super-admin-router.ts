@@ -533,9 +533,25 @@ async function planPriceUpsert(planId: string, req: IncomingMessage, res: Server
     const n = Number(instRaw);
     installment12xBrl = Number.isFinite(n) && n > 0 ? n : undefined;
   }
+  // Capacity overrides (only the non-monthly form sends them). Same convention:
+  // empty string = clear (inherit base), positive number = set, absent = leave.
+  const parseOvr = (key: string): number | null | undefined => {
+    const raw = form.get(key);
+    if (raw === "") return null;
+    if (raw == null) return undefined;
+    const n = Number(raw);
+    return Number.isFinite(n) && n > 0 ? n : undefined;
+  };
+  const maxCoursesOvr = parseOvr("max_courses_ovr");
+  const transcribeHoursMonthOvr = parseOvr("transcribe_hours_month_ovr");
+  const activeStudentsMonthOvr = parseOvr("active_students_month_ovr");
+  const kbSizeBytesOvr = parseOvr("kb_size_bytes_ovr");
   try {
     const { upsertPlanPrice } = await import("./lib/plan-prices.ts");
-    await upsertPlanPrice({ planId, recurrence, amountBrl, installment12xBrl });
+    await upsertPlanPrice({
+      planId, recurrence, amountBrl, installment12xBrl,
+      maxCoursesOvr, transcribeHoursMonthOvr, activeStudentsMonthOvr, kbSizeBytesOvr,
+    });
     redirect(res, `${publicUrl()}/super-admin/plans?tab=${encodeURIComponent(planId)}&msg=price_saved`);
   } catch (err) {
     console.error("Plan price upsert failed:", err);
@@ -987,13 +1003,13 @@ function fmtBrl(n: number): string {
 function periodsTableHtml(args: {
   ownerId: string;
   kind: "plans" | "addons";
-  prices: Array<{ id: string; recurrence: import("./lib/plan-prices.ts").Recurrence; amountBrl: number; isActive: boolean; validapayPriceId: string | null; installment12xBrl?: number | null }>;
+  prices: Array<{ id: string; recurrence: import("./lib/plan-prices.ts").Recurrence; amountBrl: number; isActive: boolean; validapayPriceId: string | null; installment12xBrl?: number | null; maxCoursesOvr?: number | null; transcribeHoursMonthOvr?: number | null; activeStudentsMonthOvr?: number | null; kbSizeBytesOvr?: number | null }>;
+  baseCapacity?: { maxCourses: number | null; transcribeHoursMonth: number | null; activeStudentsMonth: number | null; kbSizeBytes: number | null };
 }): string {
+  // Trimestral/Semestral ocultos por enquanto — só Mensal e Anual são usados.
   const periods: Array<{ key: import("./lib/plan-prices.ts").Recurrence; label: string; months: number }> = [
-    { key: "MONTHLY",     label: "Mensal",     months: 1 },
-    { key: "QUARTERLY",   label: "Trimestral", months: 3 },
-    { key: "SEMI_ANNUAL", label: "Semestral",  months: 6 },
-    { key: "ANNUAL",      label: "Anual",      months: 12 },
+    { key: "MONTHLY", label: "Mensal", months: 1 },
+    { key: "ANNUAL",  label: "Anual",  months: 12 },
   ];
   const byKey = new Map(args.prices.map((p) => [p.recurrence, p]));
   const monthly = byKey.get("MONTHLY");
@@ -1029,10 +1045,18 @@ function periodsTableHtml(args: {
           ${args.kind === "plans" && per.key === "ANNUAL"
             ? `<input name="installment_12x_brl" type="number" step="0.01" value="${cur?.installment12xBrl ?? ""}" placeholder="12× R$" title="Valor da parcela 12× (com juros) exibido na landing. Você simula o link anual, vê o valor real do ValidaPay e arredonda." style="width:110px">`
             : ""}
+          ${args.kind === "plans" && per.key !== "MONTHLY"
+            ? `<div style="flex-basis:100%;display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+                 <input name="max_courses_ovr" type="number" value="${cur?.maxCoursesOvr ?? ""}" placeholder="cursos (${args.baseCapacity?.maxCourses ?? "∞"})" title="Override de cursos — vazio herda ${args.baseCapacity?.maxCourses ?? "∞"}" style="width:118px">
+                 <input name="transcribe_hours_month_ovr" type="number" step="0.1" value="${cur?.transcribeHoursMonthOvr ?? ""}" placeholder="horas (${args.baseCapacity?.transcribeHoursMonth ?? "∞"})" title="Override de horas/mês — vazio herda ${args.baseCapacity?.transcribeHoursMonth ?? "∞"}" style="width:118px">
+                 <input name="active_students_month_ovr" type="number" value="${cur?.activeStudentsMonthOvr ?? ""}" placeholder="alunos (${args.baseCapacity?.activeStudentsMonth ?? "∞"})" title="Override de alunos — vazio herda ${args.baseCapacity?.activeStudentsMonth ?? "∞"}" style="width:118px">
+                 <input name="kb_size_bytes_ovr" type="number" value="${cur?.kbSizeBytesOvr ?? ""}" placeholder="KB bytes (${args.baseCapacity?.kbSizeBytes ?? "∞"})" title="Override de armazenamento em bytes — vazio herda ${args.baseCapacity?.kbSizeBytes ?? "∞"}" style="width:150px">
+               </div>`
+            : ""}
           <button type="submit" class="ax-btn sm">${cur ? "Salvar" : "Definir"}</button>
         </form>
         ${args.kind === "plans" && per.key === "ANNUAL"
-          ? `<span class="help" style="display:block;font-size:11px;margin-top:3px;color:var(--ax-text-mute)">parcela 12× exibida na landing</span>`
+          ? `<span class="help" style="display:block;font-size:11px;margin-top:3px;color:var(--ax-text-mute)">parcela 12× na landing · capacidade vazia = herda do plano</span>`
           : ""}
       </td>
       <td>
@@ -1068,14 +1092,20 @@ function periodsTableHtml(args: {
 function planPricesSectionHtml(
   planId: string,
   prices: Array<import("./lib/plan-prices.ts").PlanPrice>,
+  baseCapacity: { maxCourses: number | null; transcribeHoursMonth: number | null; activeStudentsMonth: number | null; kbSizeBytes: number | null },
 ): string {
   return periodsTableHtml({
     ownerId: planId,
     kind: "plans",
+    baseCapacity,
     prices: prices.map((p) => ({
       id: p.id, recurrence: p.recurrence, amountBrl: p.amountBrl,
       isActive: p.isActive, validapayPriceId: p.validapayPriceId,
       installment12xBrl: p.installment12xBrl,
+      maxCoursesOvr: p.maxCoursesOvr,
+      transcribeHoursMonthOvr: p.transcribeHoursMonthOvr,
+      activeStudentsMonthOvr: p.activeStudentsMonthOvr,
+      kbSizeBytesOvr: p.kbSizeBytesOvr,
     })),
   });
 }
@@ -1114,7 +1144,12 @@ function planTabHtml(p: PlanRowFull, args: { isActive: boolean; prices: Array<im
     </div>
   </form>
 
-  ${planPricesSectionHtml(p.id, args.prices)}
+  ${planPricesSectionHtml(p.id, args.prices, {
+    maxCourses: p.max_courses,
+    transcribeHoursMonth: p.transcribe_hours_month != null ? Number(p.transcribe_hours_month) : null,
+    activeStudentsMonth: p.active_students_month,
+    kbSizeBytes: p.kb_size_bytes != null ? Number(p.kb_size_bytes) : null,
+  })}
 
   <h3 style="margin-top:28px;font-size:13px;color:var(--ax-text-mute);text-transform:uppercase;letter-spacing:0.05em">Margem estimada (base mensal)</h3>
   <table class="ax-table" style="font-size:13px;margin-top:8px">
