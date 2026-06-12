@@ -181,6 +181,7 @@ interface SignupPlan {
   id: string; name: string;
   monthlyAmount: number | null; monthlyPriceId: string | null;
   annualAmount: number | null;  annualPriceId: string | null;
+  installment12x: number | null; // valor da parcela 12× definido no super-admin
 }
 
 async function signupGet(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -195,13 +196,17 @@ async function signupGet(req: IncomingMessage, res: ServerResponse): Promise<voi
     monthlyPriceId: p.validapay_price_id,
     annualAmount: annual.get(p.id)?.amountBrl ?? null,
     annualPriceId: annual.get(p.id)?.validapayPriceId ?? null,
+    installment12x: annual.get(p.id)?.installment12xBrl ?? null,
   }));
+  const { getSetting } = await import("./lib/settings.ts");
+  const annualBadge = (await getSetting("lp_annual_badge")) ?? "";
   const rec: "MONTHLY" | "ANNUAL" =
     (q.get("rec") ?? "").toUpperCase() === "ANNUAL" ? "ANNUAL" : "MONTHLY";
   html(res, 200, signupHtml({
     plans: signupPlans,
     selected: q.get("plan") ?? signupPlans[0]?.id ?? "",
     recurrence: rec,
+    annualBadge,
     error: q.get("error") ?? undefined,
     coupon: q.get("coupon") ?? undefined,
   }));
@@ -745,7 +750,7 @@ function pricingHtml(plans: PlanPublic[]): string {
   });
 }
 
-function signupHtml(args: { plans: SignupPlan[]; selected: string; recurrence: "MONTHLY" | "ANNUAL"; error?: string; coupon?: string }): string {
+function signupHtml(args: { plans: SignupPlan[]; selected: string; recurrence: "MONTHLY" | "ANNUAL"; annualBadge: string; error?: string; coupon?: string }): string {
   const errors: Record<string, string> = {
     missing_fields: "Preencha todos os campos.",
     bad_document: "CPF (11 dígitos) ou CNPJ (14 dígitos) inválido.",
@@ -783,6 +788,7 @@ function signupHtml(args: { plans: SignupPlan[]; selected: string; recurrence: "
       id: p.id, name: p.name,
       m: p.monthlyAmount, mOk: !!p.monthlyPriceId,
       a: p.annualAmount, aOk: !!p.annualPriceId,
+      i: p.installment12x,
     })),
   ).replace(/</g, "\\u003c");
 
@@ -820,7 +826,7 @@ function signupHtml(args: { plans: SignupPlan[]; selected: string; recurrence: "
     <label>Recorrência</label>
     <div class="su-toggle">
       <button type="button" id="su-m">Mensal</button>
-      <button type="button" id="su-a">Anual <span class="su-pill">2 meses grátis</span></button>
+      <button type="button" id="su-a">Anual ${args.annualBadge ? `<span class="su-pill">${esc(args.annualBadge)}</span>` : ""}</button>
     </div>
     <input type="hidden" id="su-rec" name="recurrence" value="${args.recurrence}">
     <div id="su-summary" class="su-summary"></div>
@@ -880,10 +886,13 @@ function signupHtml(args: { plans: SignupPlan[]; selected: string; recurrence: "
       var ok, line;
       if(rec === 'ANNUAL'){
         ok = p.aOk;
-        line = (p.a != null)
-          ? brl(p.a) + '/ano <span class="su-eq">(' + brl(p.a/12) + '/mês)</span>'
-            + '<br><span class="su-note">PIX à vista ou cartão até 12× — juros do cartão por conta do cliente</span>'
-          : '<span class="su-note">Anual indisponível neste plano</span>';
+        if(p.a != null){
+          var parc = (p.i != null) ? '12× de ' + brl(p.i) : brl(p.a/12) + '/mês';
+          line = brl(p.a) + '/ano <span class="su-eq">(' + parc + ')</span>'
+            + '<br><span class="su-note">PIX à vista ou cartão até 12× — com juros.</span>';
+        } else {
+          line = '<span class="su-note">Anual indisponível neste plano</span>';
+        }
       } else {
         ok = p.mOk;
         line = (p.m != null ? brl(p.m) + '/mês' : '—')
