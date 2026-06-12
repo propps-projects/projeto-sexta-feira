@@ -394,6 +394,14 @@ const CSS = `
   .pub-nav-links a:hover { color: var(--text) }
   .pub-nav-cta { display: flex; align-items: center; gap: 10px }
 
+  /* Âncoras com underline deslizante (igual à landing) */
+  .nav-anchor { position: relative; transition: color 0.2s ease; color: var(--text-soft) }
+  .nav-anchor::after { content: ''; position: absolute; left: 0; bottom: -3px; width: 100%; height: 1.5px;
+    background: currentColor; transform: scaleX(0); transform-origin: left center;
+    transition: transform 0.3s cubic-bezier(.22,1,.36,1) }
+  .nav-anchor:hover { color: var(--text) }
+  .nav-anchor:hover::after { transform: scaleX(1) }
+
   /* ---------- Buttons ---------- */
   .pub-btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
@@ -579,58 +587,38 @@ const CSS = `
   @media (max-width: 720px) { footer.pub-foot .inner { grid-template-columns: 1fr 1fr } }
 `;
 
+// Espelha a nav da landing (pílula centralizada). Links apontam pra home/âncoras.
 const NAV = `
-  <div class="pub-nav-wrap">
-    <div class="pub-nav">
-      <a class="pub-nav-brand" href="/"><img src="/brand/logo-black.svg" alt="Askine"></a>
-      <div class="pub-nav-links">
-        <a href="/docs">Documentação</a>
-        <a href="/pricing">Pricing</a>
-        <a href="/about">Sobre</a>
-        <a href="/status">Status</a>
-      </div>
-      <div class="pub-nav-cta">
-        <a class="pub-btn ghost sm" href="/t/demo/admin/login">Login</a>
-        <a class="pub-btn sm" href="/signup">Começar</a>
+  <nav style="display:flex;justify-content:center;padding:28px 18px 0">
+    <div style="display:flex;align-items:center;gap:clamp(24px,8vw,120px);padding:12px 40px;max-width:100%;border-radius:999px;background:rgba(0,0,0,0.03);border:1px solid var(--border)">
+      <a href="/" aria-label="Askine" style="display:inline-flex;align-items:center"><img src="/brand/logo-black.svg" alt="Askine" style="height:18px;width:auto;display:block"></a>
+      <div style="display:flex;gap:26px;font-size:16px">
+        <a href="/#recursos" class="nav-anchor" style="color:var(--text-soft)">Recursos</a>
+        <a href="/#planos" class="nav-anchor" style="color:var(--text-soft)">Planos</a>
+        <a href="/entrar" style="font-weight:700;color:var(--text)">Entrar</a>
       </div>
     </div>
-  </div>`;
+  </nav>`;
 
+// Espelha o footer da landing (logo + links + legal).
 const FOOTER = `
-  <footer class="pub-foot">
-    <div class="inner">
-      <div class="brand-col">
-        <img src="/brand/logo-black.svg" alt="Askine">
-        <p>Tutor agêntico via MCP pra infoprodutores brasileiros. Operado pela Askine LLC.</p>
-      </div>
-      <div>
-        <h5>Produto</h5>
-        <ul>
-          <li><a href="/pricing">Pricing</a></li>
-          <li><a href="/docs">Documentação</a></li>
-          <li><a href="/status">Status</a></li>
-          <li><a href="/enterprise">Enterprise</a></li>
-        </ul>
-      </div>
-      <div>
-        <h5>Empresa</h5>
-        <ul>
-          <li><a href="/about">Sobre</a></li>
-          <li><a href="/contact">Contato</a></li>
-          <li><a href="mailto:support@askine.cc">support@askine.cc</a></li>
-        </ul>
-      </div>
-      <div>
-        <h5>Legal</h5>
-        <ul>
-          <li><a href="/privacy">Privacidade</a></li>
-          <li><a href="/terms">Termos</a></li>
-        </ul>
+  <footer style="max-width:1200px;margin:0 auto;padding:64px 24px">
+    <div style="text-align:center;display:grid;gap:24px;justify-items:center">
+      <a href="/" aria-label="Askine" style="display:inline-flex;align-items:center"><img src="/brand/logo-black.svg" alt="Askine" style="height:20px;width:auto;display:block"></a>
+      <div style="display:flex;gap:28px;flex-wrap:wrap;justify-content:center;color:var(--text-soft)">
+        <a href="/#recursos" class="nav-anchor">Recursos</a>
+        <a href="/#planos" class="nav-anchor">Planos</a>
+        <a href="/entrar" class="nav-anchor" style="font-weight:700;color:var(--text)">Entrar</a>
       </div>
     </div>
-    <div class="legal">
-      <div>© 2026 Askine LLC</div>
-      <div>Askine é marca operada pela Askine LLC</div>
+    <hr style="border:none;border-top:1px solid var(--border);margin:36px 0">
+    <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px;color:var(--text-soft);font-size:14px">
+      <span>Copyright © 2026 — Askine LLC. Todos os direitos reservados.</span>
+      <div style="display:flex;gap:24px;flex-wrap:wrap">
+        <a href="/privacidade" class="nav-anchor">Privacidade</a>
+        <a href="/termos" class="nav-anchor">Termos</a>
+        <a href="/cookies" class="nav-anchor">Cookies</a>
+      </div>
     </div>
   </footer>`;
 
