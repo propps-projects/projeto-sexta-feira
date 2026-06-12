@@ -209,13 +209,6 @@ async function plansList(req: IncomingMessage, res: ServerResponse): Promise<voi
   for (const p of plans) {
     pricesByPlan.set(p.id, await listPlanPrices(p.id));
   }
-  const { getSettings } = await import("./lib/settings.ts");
-  const settings = await getSettings([
-    "lp_annual_badge",
-    "checkout_success_url", "checkout_failure_url", "checkout_company_name",
-    "checkout_primary_color", "checkout_secondary_color", "checkout_font_color",
-    "analytics_ga4_id", "analytics_meta_pixel_id",
-  ]);
   const q = getQuery(req);
   html(res, 200, layout({
     title: "Plans",
@@ -224,7 +217,6 @@ async function plansList(req: IncomingMessage, res: ServerResponse): Promise<voi
     body: plansHtml({
       plans,
       pricesByPlan,
-      settings,
       message: q.get("msg") ?? undefined,
       activeTabId: q.get("tab") ?? plans[0]?.id ?? "",
     }),
@@ -248,7 +240,26 @@ async function lpSettingsUpdate(req: IncomingMessage, res: ServerResponse): Prom
     const v = form.get(k);
     if (v !== null) await setSetting(k, v.trim().slice(0, 200));
   }
-  redirect(res, `${publicUrl()}/super-admin/plans?msg=settings_saved`);
+  redirect(res, `${publicUrl()}/super-admin/config?msg=settings_saved`);
+}
+
+async function configList(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const sess = await requireSuperAdmin(req, res);
+  if (!sess) return;
+  const { getSettings } = await import("./lib/settings.ts");
+  const settings = await getSettings([
+    "lp_annual_badge",
+    "checkout_success_url", "checkout_failure_url", "checkout_company_name",
+    "checkout_primary_color", "checkout_secondary_color", "checkout_font_color",
+    "analytics_ga4_id", "analytics_meta_pixel_id",
+  ]);
+  const q = getQuery(req);
+  html(res, 200, layout({
+    title: "Config",
+    activeNav: "config",
+    session: sess,
+    body: configHtml({ settings, message: q.get("msg") ?? undefined }),
+  }));
 }
 
 interface PlanRowFull {
@@ -875,6 +886,7 @@ function layout(args: {
         { id: "plans",     label: "Plans",     href: "/super-admin/plans",    icon: icons.plan },
         { id: "addons",    label: "Add-ons",   href: "/super-admin/addons",   icon: icons.plug },
         { id: "coupons",   label: "Cupons",    href: "/super-admin/coupons",  icon: icons.plug },
+        { id: "config",    label: "Config",    href: "/super-admin/config",   icon: icons.cog },
       ],
     }],
     activeId: args.activeNav,
@@ -1204,14 +1216,11 @@ function planTabHtml(p: PlanRowFull, args: { isActive: boolean; prices: Array<im
 function plansHtml(args: {
   plans: PlanRowFull[];
   pricesByPlan: Map<string, Array<import("./lib/plan-prices.ts").PlanPrice>>;
-  settings: Map<string, string>;
   message?: string;
   activeTabId: string;
 }): string {
-  const set = (k: string, dflt = "") => args.settings.get(k) ?? dflt;
   const msgs: Record<string, [string, "success" | "error" | "warn"]> = {
     plan_saved:        ["Capacidades atualizadas.", "success"],
-    settings_saved:    ["Configurações salvas.", "success"],
     sync_ok:           ["Sincronizado com ValidaPay.", "success"],
     sync_failed:       ["Falha ao sincronizar com ValidaPay. Veja logs.", "error"],
     sync_needs_price:  ["Defina o preço primeiro.", "error"],
@@ -1249,6 +1258,23 @@ function plansHtml(args: {
 <h1>Plans</h1>
 ${msgText ? `<div class="ax-msg ${msgKind}">${esc(msgText)}</div>` : ""}
 <p class="help" style="margin-bottom:18px">Edite preços e limites. Mudança fica ativa imediatamente. <strong>"Sync ValidaPay"</strong> cria product+price no ValidaPay e salva os IDs. Cálculo de margem embaixo de cada plano.</p>
+
+<div class="plan-tabs">${tabs}</div>
+
+${args.plans.map((p) => planTabHtml(p, { isActive: p.id === activeId, prices: args.pricesByPlan.get(p.id) ?? [] })).join("")}`;
+}
+
+// Config geral — landing + checkout (nada de planos/preços, que ficam em Plans).
+function configHtml(args: { settings: Map<string, string>; message?: string }): string {
+  const set = (k: string, dflt = "") => args.settings.get(k) ?? dflt;
+  const msgs: Record<string, [string, "success" | "error" | "warn"]> = {
+    settings_saved: ["Configurações salvas.", "success"],
+  };
+  const [msgText, msgKind] = args.message ? msgs[args.message] ?? [args.message, "error"] : ["", ""];
+  return `
+<h1>Config</h1>
+${msgText ? `<div class="ax-msg ${msgKind}">${esc(msgText)}</div>` : ""}
+<p class="help" style="margin-bottom:18px">Configurações da landing e do checkout. <strong>Planos e preços ficam na aba Plans.</strong></p>
 
 <div class="ax-card" style="margin-bottom:14px;padding:16px 18px">
   <form method="POST" action="/super-admin/lp-settings" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
@@ -1295,11 +1321,7 @@ ${msgText ? `<div class="ax-msg ${msgKind}">${esc(msgText)}</div>` : ""}
       <button type="submit" class="ax-btn sm">Salvar pixels</button>
     </div>
   </form>
-</div>
-
-<div class="plan-tabs">${tabs}</div>
-
-${args.plans.map((p) => planTabHtml(p, { isActive: p.id === activeId, prices: args.pricesByPlan.get(p.id) ?? [] })).join("")}`;
+</div>`;
 }
 
 // ----- Router --------------------------------------------------------------
@@ -1311,6 +1333,7 @@ export type SuperAdminRouteMatch =
   | { type: "tenant-plan"; slug: string }
   | { type: "tenant-status"; slug: string }
   | { type: "plans-list" }
+  | { type: "config-list" }
   | { type: "lp-settings" }
   | { type: "plan-update"; id: string }
   | { type: "plan-sync"; id: string }
@@ -1341,6 +1364,7 @@ export function matchSuperAdminRoute(suffix: string, method: string): SuperAdmin
   if (method === "GET"  && path === "/verify")   return { type: "verify" };
   if (method === "GET"  && path === "/tenants")  return { type: "tenants-list" };
   if (method === "GET"  && path === "/plans")    return { type: "plans-list" };
+  if (method === "GET"  && path === "/config")   return { type: "config-list" };
   if (method === "POST" && path === "/lp-settings") return { type: "lp-settings" };
   if (method === "GET"  && path === "/addons")   return { type: "addons-list" };
   if (method === "POST" && path === "/addons")   return { type: "addon-create" };
@@ -1400,6 +1424,7 @@ export async function handleSuperAdminRoute(
     case "tenant-plan":    return tenantPlanPost(match.slug, req, res);
     case "tenant-status":  return tenantStatusPost(match.slug, req, res);
     case "plans-list":     return plansList(req, res);
+    case "config-list":    return configList(req, res);
     case "lp-settings":    return lpSettingsUpdate(req, res);
     case "plan-update":    return planUpdate(match.id, req, res);
     case "plan-sync":      return planSyncToValidapay(match.id, req, res);
