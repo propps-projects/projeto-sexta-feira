@@ -40,7 +40,7 @@ export default function Features() {
             <div><Badge>{r.badge}</Badge></div>
             <h2 style={{ fontSize: 'clamp(28px,3.2vw,38px)', fontWeight: 600, maxWidth: '21ch' }}>{r.title}</h2>
             <p style={{ color: 'var(--ink-soft)', maxWidth: '46ch' }}>{r.body}</p>
-            <div><ArrowLink cta="integrar-meu-curso">Integrar meu curso</ArrowLink></div>
+            <div><ArrowLink href="#planos" cta="integrar-meu-curso">Integrar meu curso</ArrowLink></div>
           </motion.div>
         );
         const image = (

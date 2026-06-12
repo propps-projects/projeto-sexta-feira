@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { reveal, inViewProps } from '../../lib/motion';
 import PillButton from '../ui/PillButton';
+import ContactModal from '../ui/ContactModal';
 
 const faqs = [
   { q: 'Preciso entender de tecnologia?', a: 'Não. Você conecta a Hotmart e o PandaVideo de forma simples e a Askine™ faz o resto.' },
@@ -41,6 +42,7 @@ function Item({ q, a, open, onToggle }: { q: string; a: string; open: boolean; o
 
 export default function Faq() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const [contactOpen, setContactOpen] = useState(false);
   return (
     <section className="container" style={{ maxWidth: 920 }}>
       <motion.h2 variants={reveal} {...inViewProps} style={{ fontSize: 'clamp(32px,4.4vw,52px)', fontWeight: 700, textAlign: 'center', marginBottom: 40 }}>
@@ -61,8 +63,9 @@ export default function Faq() {
         style={{ marginTop: 48, background: 'var(--surface)', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow-soft)', padding: 40, textAlign: 'center' }}>
         <h3 style={{ fontSize: 26, fontWeight: 600 }}>Ainda com dúvidas?</h3>
         <p style={{ color: 'var(--ink-soft)', margin: '8px 0 22px' }}>Fale com o nosso time agora mesmo.</p>
-        <PillButton variant="dark" cta="falar-com-askine">Falar com Askine™</PillButton>
+        <PillButton variant="dark" onClick={() => setContactOpen(true)} cta="falar-com-askine">Falar com Askine™</PillButton>
       </motion.div>
+      <ContactModal open={contactOpen} onClose={() => setContactOpen(false)} />
     </section>
   );
 }

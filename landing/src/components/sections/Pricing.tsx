@@ -157,7 +157,7 @@ export default function Pricing() {
               </ul>
 
               <div style={{ marginTop: 24 }}>
-                <PillButton variant={p.buttonVariant} cta={`experimente-7-dias-${p.id}`} full>
+                <PillButton variant={p.buttonVariant} href="#planos" cta={`experimente-7-dias-${p.id}`} full>
                   Experimente 7 dias grátis
                 </PillButton>
               </div>

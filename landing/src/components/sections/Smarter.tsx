@@ -37,7 +37,7 @@ export default function Smarter() {
             Fazendo o ChatGPT e o Claude trabalharem para você sem se preocupar em dificultar
             a experiência de aprendizado do seu aluno.
           </p>
-          <div><ArrowLink tone="light" cta="integrar-meu-curso">Integrar meu curso</ArrowLink></div>
+          <div><ArrowLink tone="light" href="#planos" cta="integrar-meu-curso">Integrar agora mesmo</ArrowLink></div>
         </div>
         <motion.ul variants={stagger} {...inViewProps}
           style={{

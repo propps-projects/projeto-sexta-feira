@@ -19,7 +19,7 @@ export default function Hero() {
         conteúdo sem precisar criar agentes, desenvolver plataformas... nem ter custo de tokens.
       </motion.p>
       <motion.div variants={reveal} {...inViewProps} style={{ marginTop: 36 }}>
-        <PillButton variant="dark" cta="integrar-meu-curso">Integrar meu curso →</PillButton>
+        <PillButton variant="dark" href="#planos" cta="integrar-meu-curso">Integrar meu curso →</PillButton>
       </motion.div>
       <motion.div variants={reveal} {...inViewProps} style={{ marginTop: 64 }}>
         <motion.div

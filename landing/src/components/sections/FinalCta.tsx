@@ -17,7 +17,7 @@ export default function FinalCta() {
           <h2 style={{ fontSize: 'clamp(28px,3.0vw,42px)', fontWeight: 600, maxWidth: '20ch' }}>
             Transforme o ChatGPT e o Claude no Tutor do seu curso.
           </h2>
-          <div><ArrowLink cta="comecar-agora">Começar agora</ArrowLink></div>
+          <div><ArrowLink href="#planos" cta="comecar-agora">Começar agora</ArrowLink></div>
         </div>
         <div style={{ aspectRatio: '16 / 10' }}>
           <FinalCtaVisual />

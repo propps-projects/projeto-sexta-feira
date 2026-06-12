@@ -23,6 +23,7 @@ import { matchPublicRoute, handlePublicRoute } from "./public-router.ts";
 import { isBrandRoute, handleBrandRoute } from "./brand-router.ts";
 import { tryServeLanding } from "./landing-router.ts";
 import { matchEntrarRoute, handleEntrarRoute } from "./entrar-router.ts";
+import { matchContatoRoute, handleContatoRoute } from "./contato-router.ts";
 import { initObservability, captureError } from "./lib/observability.ts";
 
 // Init Sentry before the server starts handling requests so that
@@ -308,6 +309,13 @@ const httpServer = http.createServer(async (req, res) => {
     const entrarMatch = matchEntrarRoute(pathOnlyEarly, req.method ?? "GET");
     if (entrarMatch) {
       await handleEntrarRoute(entrarMatch, req, res);
+      return;
+    }
+
+    // Formulário de contato da LP (POST /contato → Brevo).
+    const contatoMatch = matchContatoRoute(pathOnlyEarly, req.method ?? "GET");
+    if (contatoMatch) {
+      await handleContatoRoute(contatoMatch, req, res);
       return;
     }
 

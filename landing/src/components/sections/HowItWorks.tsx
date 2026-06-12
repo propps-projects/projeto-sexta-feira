@@ -69,7 +69,7 @@ export default function HowItWorks() {
           Conecte sua hospedagem de vídeos, suba os materiais do seu curso e integre sua
           plataforma de vendas. Só isso!
         </p>
-        <div><ArrowLink cta="integrar-meu-curso">Integrar meu curso</ArrowLink></div>
+        <div><ArrowLink href="#planos" cta="integrar-meu-curso">Começar agora</ArrowLink></div>
       </motion.div>
 
       {simple ? (
