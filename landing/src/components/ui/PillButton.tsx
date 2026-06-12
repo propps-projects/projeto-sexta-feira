@@ -3,7 +3,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 type Variant = 'dark' | 'violet' | 'light' | 'muted';
 const palette: Record<Variant, React.CSSProperties> = {
   dark: { background: '#111', color: '#fff' },
-  violet: { background: 'var(--violet)', color: '#fff' },
+  violet: { background: '#ff6a32', color: '#fff' }, // CTA do plano em destaque (laranja da marca)
   light: { background: '#fff', color: 'var(--ink)', border: '1px solid var(--border)' },
   muted: { background: '#e9e7e1', color: 'var(--ink-soft)' },
 };
