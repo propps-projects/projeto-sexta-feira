@@ -354,28 +354,30 @@ async function signupPost(req: IncomingMessage, res: ServerResponse): Promise<vo
 // Real brand wordmark served from /brand/logo-black.svg (Phase 7 assets).
 const CSS = `
   :root {
-    --bg: #ffffff;
-    --bg-soft: #fafafa;
+    /* Alinhado à landing (Astro) — fonte Aleo, fundo creme, ink, laranja da marca */
+    --bg: #faf8f2;
+    --bg-soft: #f1efe9;
     --bg-card: #ffffff;
-    --bg-dark: #0a0a0a;
-    --border: #e7e7e7;
-    --border-strong: #d4d4d4;
-    --text: #0a0a0a;
-    --text-soft: #525252;
-    --text-mute: #8a8a8a;
-    --accent: #0a0a0a;
-    --accent-soft: #fafafa;
+    --bg-dark: #1a1a1a;
+    --border: rgba(26,26,26,0.1);
+    --border-strong: rgba(26,26,26,0.2);
+    --text: #1a1a1a;
+    --text-soft: #6b6b66;
+    --text-mute: #9a9a93;
+    --accent: #1a1a1a;
+    --accent-soft: #f1efe9;
+    --brand: #ff6a32;
     --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
     --shadow-md: 0 8px 24px rgba(0,0,0,0.06);
     --shadow-lg: 0 16px 48px rgba(0,0,0,0.08);
-    --radius: 12px;
-    --radius-lg: 20px;
+    --radius: 14px;
+    --radius-lg: 24px;
     --radius-pill: 999px;
   }
   *, *::before, *::after { box-sizing: border-box }
   html, body { margin:0; padding:0 }
   body {
-    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: 'Aleo', Georgia, 'Times New Roman', serif;
     background: var(--bg); color: var(--text); line-height: 1.55;
     -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -383,7 +385,7 @@ const CSS = `
   a { color: inherit; text-decoration: none }
 
   /* ---------- Nav ---------- */
-  .pub-nav-wrap { position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,0.92); backdrop-filter: saturate(180%) blur(12px); border-bottom: 1px solid var(--border) }
+  .pub-nav-wrap { position: sticky; top: 0; z-index: 50; background: rgba(250,248,242,0.85); backdrop-filter: saturate(180%) blur(12px); border-bottom: 1px solid var(--border) }
   .pub-nav { max-width: 1200px; margin: 0 auto; padding: 14px 24px; display: flex; align-items: center; gap: 32px }
   .pub-nav-brand { display: flex; align-items: center; gap: 10px }
   .pub-nav-brand img { height: 22px; width: auto; display: block }
@@ -1317,6 +1319,9 @@ function pageShell(args: { title: string; description: string; body: string; ext
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(args.title)}</title>
 ${pageMeta(args)}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Aleo:wght@400;500;600;700&display=swap" rel="stylesheet">
 ${args.extraHead ?? ""}
 <style>${CSS}</style>
 </head>
