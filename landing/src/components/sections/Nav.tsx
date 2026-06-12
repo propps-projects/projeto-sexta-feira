@@ -1,7 +1,7 @@
 const links = [
   { label: 'Recursos', href: '#recursos', cta: 'nav-recursos' },
   { label: 'Planos', href: '#planos', cta: 'nav-planos' },
-  { label: 'Entrar', href: '#', cta: 'entrar', strong: true },
+  { label: 'Entrar', href: '/entrar', cta: 'entrar', strong: true },
 ];
 export default function Nav() {
   return (
@@ -15,7 +15,8 @@ export default function Nav() {
         </a>
         <div className="nav-links" style={{ display: 'flex', gap: 26, fontSize: 16 }}>
           {links.map((l) => (
-            <a key={l.label} href={l.href} data-cta={l.cta} style={{ fontWeight: l.strong ? 700 : 400, color: l.strong ? 'var(--ink)' : 'var(--ink-soft)' }}>
+            <a key={l.label} href={l.href} data-cta={l.cta} className={l.strong ? undefined : 'nav-anchor'}
+              style={{ fontWeight: l.strong ? 700 : 400, color: l.strong ? 'var(--ink)' : 'var(--ink-soft)' }}>
               {l.label}
             </a>
           ))}

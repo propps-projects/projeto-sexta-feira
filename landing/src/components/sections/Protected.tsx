@@ -1,7 +1,9 @@
 import { motion } from 'framer-motion';
 import { reveal, stagger, staggerItem, inViewProps } from '../../lib/motion';
 import Card from '../ui/Card';
-import Placeholder from '../ui/Placeholder';
+import ProtectedBuyer from './visuals/ProtectedBuyer';
+import ProtectedAccess from './visuals/ProtectedAccess';
+import ProtectedScale from './visuals/ProtectedScale';
 
 const cards = [
   {
@@ -30,10 +32,10 @@ export default function Protected() {
       </motion.p>
       <motion.div variants={stagger} {...inViewProps} className="lp-grid-3"
         style={{ marginTop: 56, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, textAlign: 'left' }}>
-        {cards.map((c) => (
-          <motion.div key={c.title} variants={staggerItem} style={{ height: '100%' }}>
-            <Card style={{ display: 'grid', gap: 18, gridTemplateRows: 'auto auto 1fr', height: '100%' }}>
-              <div style={{ aspectRatio: '16 / 10' }}><Placeholder radius="var(--radius-sm)" /></div>
+        {cards.map((c, i) => (
+          <motion.div key={c.title} variants={staggerItem} style={{ height: '100%', minWidth: 0 }}>
+            <Card style={{ display: 'grid', gap: 18, gridTemplateRows: 'auto auto 1fr', height: '100%', minWidth: 0 }}>
+              <div style={{ aspectRatio: '16 / 10', minWidth: 0, overflow: 'hidden' }}>{i === 0 ? <ProtectedBuyer /> : i === 1 ? <ProtectedAccess /> : <ProtectedScale />}</div>
               <h3 style={{ fontSize: 20, fontWeight: 600 }}>{c.title}</h3>
               <p style={{ color: 'var(--ink-soft)', fontSize: 15 }}>{c.body}</p>
             </Card>

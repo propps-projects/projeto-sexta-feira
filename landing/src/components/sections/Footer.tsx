@@ -1,7 +1,7 @@
 const nav = [
   { label: 'Recursos', href: '#recursos' },
   { label: 'Planos', href: '#planos' },
-  { label: 'Entrar', href: '#', strong: true },
+  { label: 'Entrar', href: '/entrar', strong: true },
 ];
 const legal = [
   { label: 'Política de Privacidade', href: '#' },

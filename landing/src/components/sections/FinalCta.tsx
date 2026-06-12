@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { reveal, inViewProps } from '../../lib/motion';
 import Badge from '../ui/Badge';
 import ArrowLink from '../ui/ArrowLink';
-import Placeholder from '../ui/Placeholder';
+import FinalCtaVisual from './visuals/FinalCtaVisual';
 
 export default function FinalCta() {
   return (
@@ -20,7 +20,7 @@ export default function FinalCta() {
           <div><ArrowLink cta="comecar-agora">Começar agora</ArrowLink></div>
         </div>
         <div style={{ aspectRatio: '16 / 10' }}>
-          <Placeholder tone="dark" />
+          <FinalCtaVisual />
         </div>
       </motion.div>
     </section>

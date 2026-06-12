@@ -2,7 +2,10 @@ import { motion } from 'framer-motion';
 import { reveal, inViewProps } from '../../lib/motion';
 import Badge from '../ui/Badge';
 import ArrowLink from '../ui/ArrowLink';
-import Placeholder from '../ui/Placeholder';
+import FeatureIngest from './visuals/FeatureIngest';
+import FeatureOnePlace from './visuals/FeatureOnePlace';
+import FeatureNativeLesson from './visuals/FeatureNativeLesson';
+import FeatureZeroCost from './visuals/FeatureZeroCost';
 
 const rows = [
   {
@@ -41,9 +44,9 @@ export default function Features() {
           </motion.div>
         );
         const image = (
-          <motion.div variants={reveal} {...inViewProps} className="lp-feat-media" style={{ aspectRatio: '4 / 3' }}>
-            <Placeholder />
-          </motion.div>
+          <div className="lp-feat-media" style={{ aspectRatio: '4 / 3' }}>
+            {i === 0 ? <FeatureIngest /> : i === 1 ? <FeatureOnePlace /> : i === 2 ? <FeatureNativeLesson /> : <FeatureZeroCost />}
+          </div>
         );
         return (
           <div key={r.badge} className="lp-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'clamp(24px,5vw,72px)' }}>
