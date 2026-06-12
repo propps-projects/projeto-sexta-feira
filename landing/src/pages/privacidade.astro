@@ -1,92 +1,153 @@
 ---
-import Legal from '../layouts/Legal.astro';
+import Legal from "../layouts/Legal.astro";
 ---
+
 <Legal
   title="Política de Privacidade"
   description="Como a Askine coleta, usa e protege dados pessoais, em conformidade com a LGPD (Lei 13.709/2018)."
 >
   <p>
-    Esta política descreve como a <strong>Askine</strong>, marca operada pela <strong>Askine LLC</strong>,
-    coleta, usa, compartilha e protege dados pessoais. Estamos comprometidos com a
-    <strong>Lei Geral de Proteção de Dados</strong> (LGPD — Lei 13.709/2018). Ao usar nosso site ou
-    nossa plataforma, você concorda com as práticas aqui descritas.
+    Esta política descreve como a <strong>Askine</strong>, marca operada pela <strong
+      >Askine LLC</strong
+    >, coleta, usa, compartilha e protege dados pessoais. Estamos comprometidos
+    com a
+    <strong>Lei Geral de Proteção de Dados</strong> (LGPD — Lei 13.709/2018). Ao usar
+    nosso site ou nossa plataforma, você concorda com as práticas aqui descritas.
   </p>
 
   <h2>1. Quem somos (controlador)</h2>
   <p>
-    A Askine LLC é a controladora dos dados tratados neste site e na plataforma. Nosso
-    <strong>Encarregado de Dados (DPO)</strong> é Rafael Almeida Souza, contatável em
-    <a href="mailto:support@askine.cc?subject=LGPD">support@askine.cc</a> (assunto: "LGPD").
+    A Askine LLC é a controladora dos dados tratados neste site e na plataforma.
+    Nosso
+    <strong>Setor de Proteção de Dados (DPO)</strong> é contatável em
+    <a href="mailto:support@askine.cc?subject=LGPD">support@askine.cc</a> (assunto:
+    "LGPD").
   </p>
 
   <h2>2. Dados que coletamos</h2>
   <h3>2.1 Visitante do site (landing)</h3>
   <p>
-    Sem o seu consentimento explícito (banner de cookies), <strong>não</strong> coletamos nada além do
-    estritamente necessário para servir a página. Após o aceite, podemos coletar, via analytics:
-    páginas visitadas, origem do tráfego, tipo de dispositivo e localização aproximada (cidade), sem
-    identificá-lo pessoalmente.
+    Sem o seu consentimento explícito (banner de cookies), <strong>não</strong> coletamos
+    nada além do estritamente necessário para servir a página. Após o aceite, podemos
+    coletar, via analytics: páginas visitadas, origem do tráfego, tipo de dispositivo
+    e localização aproximada (cidade), sem identificá-lo pessoalmente.
   </p>
   <h3>2.2 Infoprodutor (cliente pagante)</h3>
   <ul>
-    <li>Nome, e-mail de contato, CPF ou CNPJ — para cadastro, cobrança via ValidaPay e emissão de nota fiscal</li>
+    <li>
+      Nome, e-mail de contato, CPF ou CNPJ — para cadastro, cobrança via
+      ValidaPay (Provedor de Pagamento Brasileiro) e emissão de nota fiscal
+    </li>
     <li>Slug e nome do produto, plano contratado</li>
-    <li>Credenciais de integração (token Hotmart, API key Panda Video) — armazenadas <strong>criptografadas</strong> (AES-256-GCM)</li>
+    <li>
+      Credenciais de integração (token Hotmart, API key Panda Video) —
+      armazenadas <strong>criptografadas</strong> (AES-256-GCM)
+    </li>
     <li>Logs de operação do painel administrativo</li>
   </ul>
   <h3>2.3 Aluno (consumidor final)</h3>
   <ul>
     <li>E-mail — usado como identidade única para login (OAuth) no tutor</li>
-    <li>Nome (quando fornecido pelo infoprodutor ou pelo Hotmart no momento da compra)</li>
-    <li>Registros de interação: cursos acessados, aulas tocadas, ponto em que parou</li>
-    <li>Histórico de chamadas às ferramentas, para limitar abuso (rate limiting) e gerar métricas agregadas</li>
+    <li>
+      Nome (quando fornecido pelo infoprodutor ou pelo Hotmart no momento da
+      compra)
+    </li>
+    <li>
+      Registros de interação: cursos acessados, aulas tocadas, ponto em que
+      parou
+    </li>
+    <li>
+      Histórico de chamadas às ferramentas, para limitar abuso (rate limiting) e
+      gerar métricas agregadas
+    </li>
   </ul>
 
   <h2>3. Finalidade e base legal</h2>
   <table>
     <tr><th>Finalidade</th><th>Base legal (LGPD)</th></tr>
-    <tr><td>Criar e operar a conta, autenticar acesso, servir o tutor</td><td>Execução de contrato (Art. 7º, V)</td></tr>
-    <tr><td>Cobrança, emissão de NF, prevenção a fraude</td><td>Obrigação legal / execução de contrato (Art. 7º, II e V)</td></tr>
-    <tr><td>Analytics do site (após consentimento)</td><td>Consentimento (Art. 7º, I)</td></tr>
-    <tr><td>Comunicações operacionais (login, pagamento, alertas)</td><td>Execução de contrato (Art. 7º, V)</td></tr>
-    <tr><td>Métricas agregadas de engajamento para o infoprodutor</td><td>Legítimo interesse (Art. 7º, IX)</td></tr>
+    <tr
+      ><td>Criar e operar a conta, autenticar acesso, servir o tutor</td><td
+        >Execução de contrato (Art. 7º, V)</td
+      ></tr
+    >
+    <tr
+      ><td>Cobrança, emissão de NF, prevenção a fraude</td><td
+        >Obrigação legal / execução de contrato (Art. 7º, II e V)</td
+      ></tr
+    >
+    <tr
+      ><td>Analytics do site (após consentimento)</td><td
+        >Consentimento (Art. 7º, I)</td
+      ></tr
+    >
+    <tr
+      ><td>Comunicações operacionais (login, pagamento, alertas)</td><td
+        >Execução de contrato (Art. 7º, V)</td
+      ></tr
+    >
+    <tr
+      ><td>Métricas agregadas de engajamento para o infoprodutor</td><td
+        >Legítimo interesse (Art. 7º, IX)</td
+      ></tr
+    >
   </table>
 
   <h2>4. E-mail e comunicações</h2>
   <p>
-    Coletamos o e-mail apenas para <strong>finalidades operacionais</strong>: link mágico de login,
-    avisos de pagamento e alertas críticos do serviço — todos baseados na execução do contrato.
-    <strong>Não enviamos marketing sem opt-in</strong> específico, e todo e-mail de comunicação não
-    essencial traz opção de descadastro. Você pode revogar consentimentos a qualquer momento.
+    Coletamos o e-mail apenas para <strong>finalidades operacionais</strong>:
+    link mágico de login, avisos de pagamento e alertas críticos do serviço —
+    todos baseados na execução do contrato.
+    <strong>Não enviamos marketing sem opt-in</strong> específico, e todo e-mail de
+    comunicação não essencial traz opção de descadastro. Você pode revogar consentimentos
+    a qualquer momento.
   </p>
 
   <h2>5. Cookies e rastreadores</h2>
   <p>
-    Scripts de terceiros (ex.: Google Analytics, Meta Pixel) só são carregados <strong>após o seu
-    aceite</strong> no banner de cookies. Sem aceite, nenhum rastreador é ativado. Detalhes e gestão na
-    nossa <a href="/cookies">Política de Cookies</a>.
+    Scripts de terceiros (ex.: Google Analytics, Meta Pixel) só são carregados <strong
+      >após o seu aceite</strong
+    > no banner de cookies. Sem aceite, nenhum rastreador é ativado. Detalhes e gestão
+    na nossa <a href="/cookies">Política de Cookies</a>.
   </p>
 
   <h2>6. Compartilhamento com terceiros</h2>
-  <p>Não vendemos nem alugamos dados. Compartilhamos com operadores estritamente para fazer o serviço funcionar:</p>
+  <p>
+    Não vendemos nem alugamos dados. Compartilhamos com operadores estritamente
+    para fazer o serviço funcionar:
+  </p>
   <ul>
     <li><strong>Supabase</strong> — banco de dados e armazenamento</li>
-    <li><strong>OpenAI</strong> — transcrição (Whisper) e geração de embeddings do conteúdo das aulas</li>
+    <li>
+      <strong>OpenAI</strong> — transcrição e geração de embeddings do conteúdo das
+      aulas
+    </li>
     <li><strong>Panda Video</strong> — leitura dos vídeos do infoprodutor</li>
     <li><strong>Resend</strong> — envio de e-mails transacionais</li>
     <li><strong>ValidaPay</strong> — processamento de pagamentos</li>
-    <li><strong>Hotmart</strong> — webhook de compras (apenas se o infoprodutor configurar)</li>
-    <li><strong>Anthropic (Claude) e OpenAI (ChatGPT)</strong> — quando o aluno conversa com o tutor, o conteúdo da conversa trafega por essas plataformas, sujeito às políticas delas</li>
-    <li><strong>Google e Meta</strong> — somente se você aceitar os cookies de analytics</li>
+    <li>
+      <strong>Hotmart</strong> — webhook de compras (apenas se o infoprodutor configurar)
+    </li>
+    <li>
+      <strong>Anthropic (Claude) e OpenAI (ChatGPT)</strong> — quando o aluno conversa
+      com o tutor, o conteúdo da conversa trafega por essas plataformas, sujeito às
+      políticas delas
+    </li>
+    <li>
+      <strong>Google e Meta</strong> — somente se você aceitar os cookies de analytics
+    </li>
   </ul>
   <p>
-    Alguns operadores estão fora do Brasil. Nesses casos, a transferência internacional ocorre com base
-    nas hipóteses do Art. 33 da LGPD (execução de contrato e/ou garantias adequadas dos fornecedores).
+    Alguns operadores estão fora do Brasil. Nesses casos, a transferência
+    internacional ocorre com base nas hipóteses do Art. 33 da LGPD (execução de
+    contrato e/ou garantias adequadas dos fornecedores).
   </p>
 
   <h2>7. Retenção</h2>
   <ul>
-    <li>Dados do aluno: enquanto a conta do infoprodutor estiver ativa + 6 meses após o cancelamento</li>
+    <li>
+      Dados do aluno: enquanto a conta do infoprodutor estiver ativa + 6 meses
+      após o cancelamento
+    </li>
     <li>Logs de pagamento: 5 anos (obrigação fiscal)</li>
     <li>Logs de uso/ferramentas: 90 dias agregados; logs brutos 30 dias</li>
     <li>Analytics (Google): aproximadamente 14 meses</li>
@@ -112,22 +173,27 @@ import Legal from '../layouts/Legal.astro';
     <li>Reclamação à ANPD (Autoridade Nacional de Proteção de Dados)</li>
   </ul>
   <p>
-    Envie sua solicitação para <a href="mailto:support@askine.cc?subject=LGPD">support@askine.cc</a>.
-    Respondemos em até <strong>15 dias</strong>.
+    Envie sua solicitação para <a href="mailto:support@askine.cc?subject=LGPD"
+      >support@askine.cc</a
+    >. Respondemos em até <strong>15 dias</strong>.
   </p>
 
   <h2>10. Gerenciar seu consentimento</h2>
   <p>
     Você pode revisar ou alterar sua escolha de cookies a qualquer momento:
-    <button type="button" data-cookie-prefs
-      style="border:1px solid var(--border);background:#fff;border-radius:999px;padding:6px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;color:#f3541f">
+    <button
+      type="button"
+      data-cookie-prefs
+      style="border:1px solid var(--border);background:#fff;border-radius:999px;padding:6px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;color:#f3541f"
+    >
       Gerenciar cookies
     </button>
   </p>
 
   <h2>11. Alterações nesta política</h2>
   <p>
-    Mudanças materiais serão comunicadas com 30 dias de antecedência ao e-mail cadastrado de cada
-    infoprodutor. A data da última atualização aparece no topo desta página.
+    Mudanças materiais serão comunicadas com 30 dias de antecedência ao e-mail
+    cadastrado de cada infoprodutor. A data da última atualização aparece no
+    topo desta página.
   </p>
 </Legal>
