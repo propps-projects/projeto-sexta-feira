@@ -268,6 +268,25 @@ async function signupPost(req: IncomingMessage, res: ServerResponse): Promise<vo
   const tenant = tenantRow[0];
   await inviteAdmin({ tenantId: tenant.id, email, role: "owner" });
 
+  // Checkout redirect URLs + page branding (operator-editable in /super-admin →
+  // app_settings). {slug}/{plan} are interpolated; relative URLs resolve against
+  // PUBLIC_URL (ValidaPay needs absolute redirect targets).
+  const { getSettings } = await import("./lib/settings.ts");
+  const cs = await getSettings([
+    "checkout_success_url", "checkout_failure_url", "checkout_company_name",
+    "checkout_primary_color", "checkout_secondary_color", "checkout_font_color",
+  ]);
+  const resolveUrl = (raw: string): string => {
+    const filled = raw.replaceAll("{slug}", slug).replaceAll("{plan}", planId);
+    return /^https?:\/\//i.test(filled) ? filled : publicUrl() + (filled.startsWith("/") ? filled : `/${filled}`);
+  };
+  const successUrl = resolveUrl(cs.get("checkout_success_url") || "/t/{slug}/admin/login");
+  const failureUrl = resolveUrl(cs.get("checkout_failure_url") || "/signup?plan={plan}");
+  const companyName = cs.get("checkout_company_name");
+  const primaryColor = cs.get("checkout_primary_color");
+  const secondaryColor = cs.get("checkout_secondary_color");
+  const fontColor = cs.get("checkout_font_color");
+
   let checkoutUrl: string;
   try {
     const session = await createCheckoutSession({
@@ -280,6 +299,12 @@ async function signupPost(req: IncomingMessage, res: ServerResponse): Promise<vo
       ...(recurrence === "ANNUAL"
         ? { maxInstallments: 12, passFeesToCustomer: true, freeInstallments: 1 }
         : {}),
+      successUrl,
+      failureUrl,
+      ...(companyName ? { companyName } : {}),
+      ...(primaryColor ? { primaryColor } : {}),
+      ...(secondaryColor ? { secondaryColor } : {}),
+      ...(fontColor ? { fontColor } : {}),
       ...(validatedCouponCode ? { couponCode: validatedCouponCode } : {}),
     });
     await sb.update("tenants", `id=eq.${tenant.id}`, {

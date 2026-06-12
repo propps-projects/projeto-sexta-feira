@@ -297,8 +297,14 @@ export async function createCheckoutSession(args: {
   maxInstallments?: number;
   passFeesToCustomer?: boolean;
   freeInstallments?: number;
+  // Redirect targets after payment on the hosted page (must be absolute URLs).
   successUrl?: string;
   failureUrl?: string;
+  // Branding of the ValidaPay hosted checkout page.
+  companyName?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
+  fontColor?: string;
 }): Promise<CheckoutSession> {
   return api<CheckoutSession>("POST", "/v1/checkouts/session", {
     priceId: args.priceId,
@@ -310,6 +316,10 @@ export async function createCheckoutSession(args: {
     ...(args.freeInstallments != null ? { freeInstallments: args.freeInstallments } : {}),
     ...(args.successUrl ? { successUrl: args.successUrl } : {}),
     ...(args.failureUrl ? { failureUrl: args.failureUrl } : {}),
+    ...(args.companyName ? { companyName: args.companyName } : {}),
+    ...(args.primaryColor ? { primaryColor: args.primaryColor } : {}),
+    ...(args.secondaryColor ? { secondaryColor: args.secondaryColor } : {}),
+    ...(args.fontColor ? { fontColor: args.fontColor } : {}),
   });
 }
 

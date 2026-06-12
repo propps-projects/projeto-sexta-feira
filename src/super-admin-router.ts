@@ -209,8 +209,12 @@ async function plansList(req: IncomingMessage, res: ServerResponse): Promise<voi
   for (const p of plans) {
     pricesByPlan.set(p.id, await listPlanPrices(p.id));
   }
-  const { getSetting } = await import("./lib/settings.ts");
-  const lpAnnualBadge = (await getSetting("lp_annual_badge")) ?? "17% OFF";
+  const { getSettings } = await import("./lib/settings.ts");
+  const settings = await getSettings([
+    "lp_annual_badge",
+    "checkout_success_url", "checkout_failure_url", "checkout_company_name",
+    "checkout_primary_color", "checkout_secondary_color", "checkout_font_color",
+  ]);
   const q = getQuery(req);
   html(res, 200, layout({
     title: "Plans",
@@ -219,22 +223,30 @@ async function plansList(req: IncomingMessage, res: ServerResponse): Promise<voi
     body: plansHtml({
       plans,
       pricesByPlan,
-      lpAnnualBadge,
+      settings,
       message: q.get("msg") ?? undefined,
       activeTabId: q.get("tab") ?? plans[0]?.id ?? "",
     }),
   }));
 }
 
-/** Saves landing-page settings (today: the annual-toggle badge text). */
+/** Saves landing/checkout settings. Each form only submits its own fields, so we
+ *  persist only the keys present in this request (absent key = left untouched). */
 async function lpSettingsUpdate(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const sess = await requireSuperAdmin(req, res);
   if (!sess) return;
   const form = await readForm(req);
-  const badge = (form.get("lp_annual_badge") ?? "").trim().slice(0, 40);
   const { setSetting } = await import("./lib/settings.ts");
-  await setSetting("lp_annual_badge", badge);
-  redirect(res, `${publicUrl()}/super-admin/plans?msg=badge_saved`);
+  const KEYS = [
+    "lp_annual_badge",
+    "checkout_success_url", "checkout_failure_url", "checkout_company_name",
+    "checkout_primary_color", "checkout_secondary_color", "checkout_font_color",
+  ];
+  for (const k of KEYS) {
+    const v = form.get(k);
+    if (v !== null) await setSetting(k, v.trim().slice(0, 200));
+  }
+  redirect(res, `${publicUrl()}/super-admin/plans?msg=settings_saved`);
 }
 
 interface PlanRowFull {
@@ -1190,13 +1202,14 @@ function planTabHtml(p: PlanRowFull, args: { isActive: boolean; prices: Array<im
 function plansHtml(args: {
   plans: PlanRowFull[];
   pricesByPlan: Map<string, Array<import("./lib/plan-prices.ts").PlanPrice>>;
-  lpAnnualBadge: string;
+  settings: Map<string, string>;
   message?: string;
   activeTabId: string;
 }): string {
+  const set = (k: string, dflt = "") => args.settings.get(k) ?? dflt;
   const msgs: Record<string, [string, "success" | "error" | "warn"]> = {
     plan_saved:        ["Capacidades atualizadas.", "success"],
-    badge_saved:       ["Selo do Anual atualizado na landing.", "success"],
+    settings_saved:    ["Configurações salvas.", "success"],
     sync_ok:           ["Sincronizado com ValidaPay.", "success"],
     sync_failed:       ["Falha ao sincronizar com ValidaPay. Veja logs.", "error"],
     sync_needs_price:  ["Defina o preço primeiro.", "error"],
@@ -1235,14 +1248,36 @@ function plansHtml(args: {
 ${msgText ? `<div class="ax-msg ${msgKind}">${esc(msgText)}</div>` : ""}
 <p class="help" style="margin-bottom:18px">Edite preços e limites. Mudança fica ativa imediatamente. <strong>"Sync ValidaPay"</strong> cria product+price no ValidaPay e salva os IDs. Cálculo de margem embaixo de cada plano.</p>
 
-<div class="ax-card" style="margin-bottom:20px;padding:16px 18px">
+<div class="ax-card" style="margin-bottom:14px;padding:16px 18px">
   <form method="POST" action="/super-admin/lp-settings" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
     <div>
       <label style="display:block;font-size:12px;color:var(--ax-text-mute);margin-bottom:4px">Selo do toggle Anual na landing</label>
-      <input name="lp_annual_badge" value="${esc(args.lpAnnualBadge)}" maxlength="40" placeholder="17% OFF" style="width:240px">
+      <input name="lp_annual_badge" value="${esc(set("lp_annual_badge", "17% OFF"))}" maxlength="40" placeholder="17% OFF" style="width:240px">
     </div>
     <button type="submit" class="ax-btn sm">Salvar selo</button>
     <span class="help" style="font-size:11.5px;color:var(--ax-text-mute)">Aparece ao lado de "Anual" nos cards de preço (ex.: "17% OFF", "2 meses grátis"). Vazio = sem selo.</span>
+  </form>
+</div>
+
+<div class="ax-card" style="margin-bottom:20px;padding:16px 18px">
+  <h3 style="margin:0 0 4px;font-size:13px;color:var(--ax-text-mute);text-transform:uppercase;letter-spacing:0.05em">Checkout (ValidaPay)</h3>
+  <p class="help" style="margin:0 0 12px;font-size:11.5px">Pra onde o cliente volta após pagar e a aparência da página de pagamento. Use <code>{slug}</code> (subdomínio do tenant) e <code>{plan}</code> nas URLs; caminho relativo é resolvido pro domínio do app. Cor vazia = padrão do ValidaPay.</p>
+  <form method="POST" action="/super-admin/lp-settings" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;align-items:end">
+    <div><label style="display:block;font-size:12px;color:var(--ax-text-mute);margin-bottom:4px">URL após pagamento aprovado</label>
+      <input name="checkout_success_url" value="${esc(set("checkout_success_url", "/t/{slug}/admin/login"))}" placeholder="/t/{slug}/admin/login" style="width:100%"></div>
+    <div><label style="display:block;font-size:12px;color:var(--ax-text-mute);margin-bottom:4px">URL após pagamento recusado</label>
+      <input name="checkout_failure_url" value="${esc(set("checkout_failure_url", "/signup?plan={plan}"))}" placeholder="/signup?plan={plan}" style="width:100%"></div>
+    <div><label style="display:block;font-size:12px;color:var(--ax-text-mute);margin-bottom:4px">Nome da empresa no checkout</label>
+      <input name="checkout_company_name" value="${esc(set("checkout_company_name", "Askine"))}" maxlength="60" placeholder="Askine" style="width:100%"></div>
+    <div><label style="display:block;font-size:12px;color:var(--ax-text-mute);margin-bottom:4px">Cor primária (hex)</label>
+      <input name="checkout_primary_color" value="${esc(set("checkout_primary_color"))}" maxlength="9" placeholder="#6366f1" style="width:100%"></div>
+    <div><label style="display:block;font-size:12px;color:var(--ax-text-mute);margin-bottom:4px">Cor secundária (hex)</label>
+      <input name="checkout_secondary_color" value="${esc(set("checkout_secondary_color"))}" maxlength="9" placeholder="#818cf8" style="width:100%"></div>
+    <div><label style="display:block;font-size:12px;color:var(--ax-text-mute);margin-bottom:4px">Cor do texto (hex)</label>
+      <input name="checkout_font_color" value="${esc(set("checkout_font_color"))}" maxlength="9" placeholder="#ffffff" style="width:100%"></div>
+    <div style="grid-column:1/-1;display:flex;justify-content:flex-end">
+      <button type="submit" class="ax-btn sm">Salvar checkout</button>
+    </div>
   </form>
 </div>
 
