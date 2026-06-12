@@ -2,7 +2,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { GptLogo, ClaudeLogo } from './logos';
 
 /**
- * Visual do CTA final (painel escuro). Fluxo: Askine (topo) → Seu curso (meio)
+ * Visual do CTA final (painel escuro). Fluxo: Seu curso (topo) → Askine (meio)
  * → dentro do ChatGPT e Claude (base). Caixa fixa; só o conteúdo anima.
  */
 
@@ -37,7 +37,7 @@ export default function FinalCtaVisual() {
       </svg>
 
       {/* Askine (topo) — posição no div estático; scale no motion interno */}
-      <div style={{ position: 'absolute', left: '50%', top: '15%', transform: 'translate(-50%,-50%)', zIndex: 1 }}>
+      <div style={{ position: 'absolute', left: '50%', top: '47%', transform: 'translate(-50%,-50%)', zIndex: 1 }}>
         <motion.div
           animate={reduced ? {} : { scale: [1, 1.07, 1] }} transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
           style={{
@@ -49,7 +49,7 @@ export default function FinalCtaVisual() {
       </div>
       {/* rótulo ao lado do ícone (não desloca o ícone → linha continua alinhada) */}
       <div style={{
-        position: 'absolute', left: '51.5%', top: '15%', transform: 'translate(30px,-50%)', zIndex: 1,
+        position: 'absolute', left: '51.5%', top: '47%', transform: 'translate(30px,-50%)', zIndex: 1,
         fontSize: 'clamp(10px,2.4vw,12.5px)', fontWeight: 600, color: 'rgba(255,255,255,.88)', whiteSpace: 'nowrap'
       }}>Askine™</div>
 
@@ -58,7 +58,7 @@ export default function FinalCtaVisual() {
         animate={reduced ? {} : { boxShadow: ['0 0 18px rgba(217,119,87,.22)', '0 0 30px rgba(217,119,87,.42)', '0 0 18px rgba(217,119,87,.22)'] }}
         transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
         style={{
-          position: 'absolute', left: '50%', top: '47%', transform: 'translate(-50%,-50%)', zIndex: 1, maxWidth: '82%',
+          position: 'absolute', left: '50%', top: '15%', transform: 'translate(-50%,-50%)', zIndex: 1, maxWidth: '82%',
           display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap',
           background: 'linear-gradient(180deg,#2e2e2c,#232321)', border: '1px solid rgba(255,255,255,.16)', borderRadius: 12, padding: '9px 14px'
         }}>
