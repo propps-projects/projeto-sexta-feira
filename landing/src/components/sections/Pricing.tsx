@@ -98,8 +98,7 @@ export default function Pricing() {
                   <>
                     <p style={{ color: soft, fontSize: 14 }}>12x de</p>
                     <p style={{ fontSize: 44, fontWeight: 700, lineHeight: 1 }}>{installmentVal}</p>
-                    <p style={{ color: soft, fontSize: 14, marginTop: 6 }}>{annualFull}</p>
-                    <p style={{ color: soft, fontSize: 13, marginTop: 8 }}>{p.anual.note}</p>
+                    <p style={{ color: soft, fontSize: 14, marginTop: 6 }}>{annualFull} ({p.anual.note})</p>
                   </>
                 ) : (
                   <>
