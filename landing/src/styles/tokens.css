@@ -43,12 +43,18 @@ section { padding-block: 90px; }
    mobile rola junto com a página. */
 .lp-header { position: relative; z-index: 100; }
 @media (min-width: 861px) {
-  .lp-header {
-    position: sticky; top: 0;
+  .lp-header { position: sticky; top: 0; isolation: isolate; padding-bottom: 20px; }
+  /* Camada de fundo (cream + blur) atrás do conteúdo, com degradê que desbota
+     o bottom — evita a "linha bruta". A pílula do nav fica nítida por cima. */
+  .lp-header::after {
+    content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
     background: rgba(250, 248, 242, 0.82);
     backdrop-filter: saturate(180%) blur(10px);
     -webkit-backdrop-filter: saturate(180%) blur(10px);
+    -webkit-mask-image: linear-gradient(to bottom, #000 68%, transparent 100%);
+            mask-image: linear-gradient(to bottom, #000 68%, transparent 100%);
   }
+  .lp-header > * { position: relative; z-index: 1; }
   /* dentro do header sticky, encosta o nav no topo (sem o respiro de 28px) */
   .lp-header > nav { padding-top: 14px !important; }
 }
