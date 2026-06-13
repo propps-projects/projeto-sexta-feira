@@ -43,16 +43,9 @@ section { padding-block: 90px; }
    mobile rola junto com a página. */
 .lp-header { position: relative; z-index: 100; }
 @media (min-width: 861px) {
-  .lp-header { position: sticky; top: 0; isolation: isolate; padding-bottom: 28px; }
-  /* Fundo cream OPACO que vira transparente no bottom — degradê limpo, sem blur
-     (o blur translúcido sobre seções escuras virava mancha). A pílula fica nítida. */
-  .lp-header::after {
-    content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
-    background: linear-gradient(to bottom,
-      var(--bg) 0%, var(--bg) 45%, rgba(250, 248, 242, 0) 100%);
-  }
-  .lp-header > * { position: relative; z-index: 1; }
-  /* dentro do header sticky, encosta o nav no topo (sem o respiro de 28px) */
+  /* Header transparente e sticky; a pílula do nav é sólida (cápsula flutuante),
+     então fica legível sobre qualquer seção sem overlay/mancha. */
+  .lp-header { position: sticky; top: 0; }
   .lp-header > nav { padding-top: 14px !important; }
 }
 
